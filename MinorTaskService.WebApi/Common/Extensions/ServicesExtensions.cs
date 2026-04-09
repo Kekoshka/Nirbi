@@ -1,0 +1,57 @@
+﻿using ExceptionHandler.Exceptions;
+using Microsoft.EntityFrameworkCore;
+using MinorTaskService.DataAccess.Postgres.Context;
+using MinorTaskService.WebApi.Common.DataSeed;
+using MinorTaskService.WebApi.Common.ExternalApi;
+using Refit;
+using System.Reflection;
+
+namespace MinorTaskService.WebApi.Common.Extensions
+{
+    public static class ServicesExtensions
+    {
+        static string ConfigNameConnectionStringPostgre = "PostgreSql";
+        
+        public static void UsePostgreSql(this IServiceCollection services, IConfiguration configuration)
+        {
+            services.AddDbContext<AppDbContext>((serviceProvider,options) =>
+            {
+                var connectionString = configuration.GetConnectionString(ConfigNameConnectionStringPostgre);
+                if (connectionString is null)
+                    throw new NotFoundException($"Connection string with name {ConfigNameConnectionStringPostgre} not found");
+                options.UseNpgsql(connectionString);
+                options.UseAsyncSeeding(async (dbContext, _, cancellationToken) =>
+                {
+                    var context = (AppDbContext)dbContext;
+
+                    if (await context.Statuses.AnyAsync())
+                        return;
+
+                    await context.Statuses.AddRangeAsync(StatusesSeed.Statuses, cancellationToken);
+                    await context.SaveChangesAsync(cancellationToken);
+                });
+            });
+        }
+
+        public static void AddRefit(this IServiceCollection services, IConfiguration configuration)
+        {
+            var apiInterfaces = Assembly.GetExecutingAssembly()
+                .GetTypes()
+                .Where(st => st.IsInterface && st.Name.StartsWith("I") && st.Name.EndsWith("Api"));
+            foreach (var apiInterface in apiInterfaces)
+            {
+                var serviceName = apiInterface.Name.Substring(1, apiInterface.Name.Length - 4);
+                var baseAddress = configuration
+                    .GetSection(nameof(ExternalServicesOptions))
+                    .GetValue<string>(serviceName + "Address");
+                if (baseAddress is null)
+                    throw new NotFoundException($"Base address for {serviceName} not found");
+
+                services.AddRefitClient(apiInterface)
+                    .ConfigureHttpClient(c => c.BaseAddress = new Uri(baseAddress));
+            }
+        }
+
+
+    }
+}
