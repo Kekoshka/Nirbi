@@ -4,9 +4,11 @@ using Confluent.SchemaRegistry.Serdes;
 using Microsoft.Extensions.Options;
 using MinorTaskService.WebApi.Common.Options;
 
+using MinorTaskService.WebApi.Interfaces;
+
 namespace MinorTaskService.WebApi.Services
 {
-    public class KafkaService
+    public class KafkaService : IKafkaService
     {
         ExternalServicesOptions _servicesOptions;
         ILogger _logger;
@@ -19,8 +21,8 @@ namespace MinorTaskService.WebApi.Services
         }
         
         public async Task ProduceAsync<TKey, TValue>(string topic,
-            TValue value,
             TKey key,
+            TValue value,
             CancellationToken cancellationToken)
         {
             var producerConfig = new ProducerConfig()

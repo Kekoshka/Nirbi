@@ -1,0 +1,18 @@
+{
+  "profiles": {
+    "Docker Compose": {
+      "commandName": "DockerCompose",
+      "commandVersion": "1.0",
+      "serviceActions": {
+        "authservice.webapi": "StartWithoutDebugging",
+        "keycloak": "StartWithoutDebugging",
+        "pgadmin": "StartWithoutDebugging",
+        "postgres": "StartWithoutDebugging",
+        "redis": "StartWithoutDebugging",
+        "redis-commander": "StartWithoutDebugging",
+        "dataservice.webapi": "StartDebugging",
+        "minio": "StartWithoutDebugging"
+      }
+    }
+  }
+}

@@ -1,5 +1,7 @@
 ﻿using MediatR;
 using MinorTaskService.WebApi.Common.DTO;
+using MinorTaskService.WebApi.Common.Mappers;
+using MinorTaskService.WebApi.Interfaces;
 
 namespace MinorTaskService.WebApi.Mediator
 {
@@ -8,14 +10,16 @@ namespace MinorTaskService.WebApi.Mediator
 
     public class GetMinorTaskByIdQueryHandler : IRequestHandler<GetMinorTaskByIdQuery, GetMinorTaskResponse>
     {
-        public GetMinorTaskByIdQueryHandler()
+        IMinorTaskService _minorTaskService;
+        public GetMinorTaskByIdQueryHandler(IMinorTaskService minorTaskService)
         {
-
+            _minorTaskService = minorTaskService;
         }
 
-        public Task<GetMinorTaskResponse> Handle(GetMinorTaskByIdQuery request, CancellationToken cancellationToken)
+        public async Task<GetMinorTaskResponse> Handle(GetMinorTaskByIdQuery request, CancellationToken cancellationToken)
         {
-            throw new NotImplementedException();
+            var task = await _minorTaskService.GetMinorTaskByIdAsync(request.MinorTaskId);
+            return task.ToGetMinorTaskResponse();
         }
     }
 }

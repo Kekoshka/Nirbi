@@ -17,12 +17,4 @@ namespace MinorTaskService.DataAccess.Postgres.DomainEvents.Events
         public Guid EventId { get; } = Guid.NewGuid();
         public DateTime OccurredOn { get; } = DateTime.UtcNow;
     }
-
-    public class MinorTaskCreatedEventHandler : IDomainEventHandler<MinorTaskCreatedEvent>
-    {
-        public Task Handle(MinorTaskCreatedEvent domainEvent, CancellationToken cancellationToken = default)
-        {
-            throw new NotImplementedException();
-        }
-    }
 }

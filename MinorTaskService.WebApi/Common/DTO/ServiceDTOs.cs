@@ -28,6 +28,7 @@
         DateTime CreatedAt);
     public record class GetMinorTasksDTO(
         string Name,
+        string Description,
         decimal Latitude,
         decimal Longitude,
         decimal Encouragement,
@@ -36,4 +37,6 @@
     public record class GetStatusesDTO(
         Guid Id,
         string Name);
+
+    public record class GetMinorTaskParticipantsDTO(Guid UserId);
 }

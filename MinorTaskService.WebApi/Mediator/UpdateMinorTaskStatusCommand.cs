@@ -1,21 +1,23 @@
 ﻿using MediatR;
+using MinorTaskService.WebApi.Interfaces;
 
 namespace MinorTaskService.WebApi.Mediator
 {
     public record class UpdateMinorTaskStatusCommand(
-        Guid Id,
+        Guid MinorTaskId,
         Guid StatusId) : IRequest;
 
     public class UpdateMinorTaskStatusCommandHandler : IRequestHandler<UpdateMinorTaskStatusCommand>
     {
-        public UpdateMinorTaskStatusCommandHandler()
+        IMinorTaskService _minorTaskService;
+        public UpdateMinorTaskStatusCommandHandler(IMinorTaskService minorTaskService)
         {
-
+            _minorTaskService = minorTaskService;
         }
 
-        public Task Handle(UpdateMinorTaskStatusCommand request, CancellationToken cancellationToken)
+        public async Task Handle(UpdateMinorTaskStatusCommand request, CancellationToken cancellationToken)
         {
-            throw new NotImplementedException();
+            await _minorTaskService.UpdateMinorTaskStatusAsync(request.MinorTaskId, request.StatusId,cancellationToken);
         }
     }
 }

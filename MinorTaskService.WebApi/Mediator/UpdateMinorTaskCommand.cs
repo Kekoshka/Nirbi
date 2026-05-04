@@ -1,4 +1,6 @@
 ﻿using MediatR;
+using MinorTaskService.WebApi.Common.Mappers;
+using MinorTaskService.WebApi.Interfaces;
 
 namespace MinorTaskService.WebApi.Mediator
 {
@@ -8,21 +10,20 @@ namespace MinorTaskService.WebApi.Mediator
         string Description,
         decimal Latitude,
         decimal Longitude,
-        int NimberVolunteers,
-        decimal Encouragement,
-        Guid StatusId) : IRequest;
+        int NumberVolunteers,
+        decimal Encouragement) : IRequest;
 
     public class UpdateMinorTaskCommandHandler : IRequestHandler<UpdateMinorTaskCommand>
     {
-
-        public UpdateMinorTaskCommandHandler()
+        IMinorTaskService _minorTaskService;
+        public UpdateMinorTaskCommandHandler(IMinorTaskService minorTaskService)
         {
-
+            _minorTaskService = minorTaskService;
         }
         
-        public Task Handle(UpdateMinorTaskCommand request, CancellationToken cancellationToken)
+        public async Task Handle(UpdateMinorTaskCommand request, CancellationToken cancellationToken)
         {
-            throw new NotImplementedException();
+            await _minorTaskService.UpdateMinorTaskAsync(request.ToUpdateMinorTaskDTO(), cancellationToken);
         }
     }
 }

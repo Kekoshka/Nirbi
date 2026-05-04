@@ -3,6 +3,8 @@ using Microsoft.EntityFrameworkCore;
 using MinorTaskService.DataAccess.Postgres.Context;
 using MinorTaskService.WebApi.Common.DataSeed;
 using MinorTaskService.WebApi.Common.ExternalApi;
+using MinorTaskService.WebApi.Common.Options;
+using Nirbi.ServiceAuth.Http;
 using Refit;
 using System.Reflection;
 
@@ -48,10 +50,9 @@ namespace MinorTaskService.WebApi.Common.Extensions
                     throw new NotFoundException($"Base address for {serviceName} not found");
 
                 services.AddRefitClient(apiInterface)
-                    .ConfigureHttpClient(c => c.BaseAddress = new Uri(baseAddress));
+                    .ConfigureHttpClient(c => c.BaseAddress = new Uri(baseAddress))
+                    .AddHttpMessageHandler<ServiceAccessTokenDelegatingHandler>();
             }
         }
-
-
     }
 }

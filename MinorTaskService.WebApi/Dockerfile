@@ -12,6 +12,13 @@ EXPOSE 8081
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
+
+COPY ["packages/", "/src/packages/"]
+
+RUN dotnet restore "MinorTaskService.WebApi/MinorTaskService.WebApi.csproj" \
+    --source /src/packages \
+    --source https://api.nuget.org/v3/index.json
+
 COPY ["MinorTaskService.WebApi/MinorTaskService.WebApi.csproj", "MinorTaskService.WebApi/"]
 RUN dotnet restore "./MinorTaskService.WebApi/MinorTaskService.WebApi.csproj"
 COPY . .

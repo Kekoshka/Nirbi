@@ -16,5 +16,6 @@
         decimal Latitude,
         decimal Longitude,
         int NumberVolunteers,
-        decimal Encouragement);
+        decimal Encouragement,
+        Guid Images = default);
 }

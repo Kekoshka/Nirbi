@@ -1,5 +1,8 @@
-﻿using MinorTaskService.DataAccess.Postgres.Context;
+﻿using ExceptionHandler.Exceptions;
+using Microsoft.EntityFrameworkCore;
+using MinorTaskService.DataAccess.Postgres.Context;
 using MinorTaskService.DataAccess.Postgres.Models;
+using MinorTaskService.WebApi.Common.DTO;
 using MinorTaskService.WebApi.Interfaces;
 
 namespace MinorTaskService.WebApi.Services
@@ -10,6 +13,17 @@ namespace MinorTaskService.WebApi.Services
         public TaskParticipantService(AppDbContext context) 
         {
             _context = context;
+        }
+
+        public async Task<List<Guid>> GetMinorTaskParticipants(Guid minorTaskId)
+        {
+            var participants = await _context.TaskParticipants
+                .Where(p => p.MinorTaskId == minorTaskId)
+                .AsNoTracking()
+                .Select(p => p.UserId) 
+                .ToListAsync();
+
+            return participants;
         }
 
         public async Task AddTaskParticipantAsync(Guid minorTaskId, Guid userId, CancellationToken cancellationToken)
@@ -24,7 +38,7 @@ namespace MinorTaskService.WebApi.Services
         {
             var taskParticipant = await _context.TaskParticipants.FindAsync(minorTaskId, participantId, cancellationToken);
             if (taskParticipant is null)
-                throw new DirectoryNotFoundException($"Task participant with id {participantId} in minor task with id {minorTaskId} not found");
+                throw new NotFoundException($"Task participant with id {participantId} in minor task with id {minorTaskId} not found");
         
             taskParticipant.Remove();
             await _context.SaveChangesAsync(cancellationToken);

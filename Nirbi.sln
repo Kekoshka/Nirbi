@@ -42,6 +42,21 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "MajorEventService", "MajorE
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "UserService", "UserService", "{DE9E68A5-988B-4609-9849-7C78CFE44238}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "AuthService", "AuthService", "{EC2C5702-9F7F-4BDD-A787-5087D2A9B945}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AuthService.DataAccess.Postgres", "AuthService.DataAccess.Postgres\AuthService.DataAccess.Postgres.csproj", "{C7FA720C-0D12-43B6-8842-DF63A2A3FCA9}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AuthService.WebApi", "AuthService.WebApi\AuthService.WebApi.csproj", "{9C6DD0C4-3EC1-40D6-9918-8CB162569C30}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Nirbi.ServiceAuth", "Nirbi.ServiceAuth\Nirbi.ServiceAuth.csproj", "{E4C5B8A1-7F2D-4E9C-B1A0-123456789DEF}"
+EndProject
+Project("{E53339B2-1760-4266-BCC7-CA923CBCF16C}") = "docker-compose", "docker-compose.dcproj", "{81DDED9D-158B-E303-5F62-77A2896D2A5A}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Элементы решения", "Элементы решения", "{754FC069-D67B-A9D7-50A1-8D1CA196D8F1}"
+	ProjectSection(SolutionItems) = preProject
+		init-databases.sql = init-databases.sql
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -96,6 +111,22 @@ Global
 		{D7E5C30C-D1FE-4D0C-A89E-111563780886}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{D7E5C30C-D1FE-4D0C-A89E-111563780886}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{D7E5C30C-D1FE-4D0C-A89E-111563780886}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C7FA720C-0D12-43B6-8842-DF63A2A3FCA9}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C7FA720C-0D12-43B6-8842-DF63A2A3FCA9}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C7FA720C-0D12-43B6-8842-DF63A2A3FCA9}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C7FA720C-0D12-43B6-8842-DF63A2A3FCA9}.Release|Any CPU.Build.0 = Release|Any CPU
+		{9C6DD0C4-3EC1-40D6-9918-8CB162569C30}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{9C6DD0C4-3EC1-40D6-9918-8CB162569C30}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{9C6DD0C4-3EC1-40D6-9918-8CB162569C30}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{9C6DD0C4-3EC1-40D6-9918-8CB162569C30}.Release|Any CPU.Build.0 = Release|Any CPU
+		{E4C5B8A1-7F2D-4E9C-B1A0-123456789DEF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E4C5B8A1-7F2D-4E9C-B1A0-123456789DEF}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E4C5B8A1-7F2D-4E9C-B1A0-123456789DEF}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E4C5B8A1-7F2D-4E9C-B1A0-123456789DEF}.Release|Any CPU.Build.0 = Release|Any CPU
+		{81DDED9D-158B-E303-5F62-77A2896D2A5A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{81DDED9D-158B-E303-5F62-77A2896D2A5A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{81DDED9D-158B-E303-5F62-77A2896D2A5A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{81DDED9D-158B-E303-5F62-77A2896D2A5A}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -113,6 +144,9 @@ Global
 		{DE982D5B-C938-4078-87A3-7E9D27570B05} = {58722CDF-2749-456E-A368-66211042F81D}
 		{CDFD8367-75D7-4673-BBEB-C7578E5F5390} = {E4E37D4F-8659-4B1D-861B-31589053BD8B}
 		{D7E5C30C-D1FE-4D0C-A89E-111563780886} = {E4E37D4F-8659-4B1D-861B-31589053BD8B}
+		{C7FA720C-0D12-43B6-8842-DF63A2A3FCA9} = {EC2C5702-9F7F-4BDD-A787-5087D2A9B945}
+		{9C6DD0C4-3EC1-40D6-9918-8CB162569C30} = {EC2C5702-9F7F-4BDD-A787-5087D2A9B945}
+		{E4C5B8A1-7F2D-4E9C-B1A0-123456789DEF} = {EC2C5702-9F7F-4BDD-A787-5087D2A9B945}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {7C06E773-3264-4CD2-AD6C-7FBDC037B43A}

@@ -15,5 +15,9 @@
         string Description,
         decimal Latitude,
         decimal Longitude,
-        decimal Encouragement);
+        decimal Encouragement,
+        DateTime CreatedAt);
+    public record class GetStatusesResponse(
+        Guid Id,
+        string Name);
 }

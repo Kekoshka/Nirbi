@@ -2,10 +2,11 @@
 using MinorTaskService.DataAccess.Postgres.Context;
 using MinorTaskService.WebApi.Common.DTO;
 using MinorTaskService.WebApi.Common.Mappers;
+using MinorTaskService.WebApi.Interfaces;
 
 namespace MinorTaskService.WebApi.Services
 {
-    public class StatusService
+    public class StatusService : IStatusService
     {
         AppDbContext _context;
         public StatusService(

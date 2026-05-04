@@ -1,0 +1,194 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: auth_postgres
+    environment:
+      POSTGRES_DB: auth
+      POSTGRES_PASSWORD: postgres_password
+      POSTGRES_INITDB_ARGS: --encoding=UTF8 --locale=en_US.UTF-8
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./init-databases.sql:/docker-entrypoint-initdb.d/01-init-databases.sql
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - auth_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:latest
+    container_name: auth_keycloak
+    environment:
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://postgres:5432/keycloak
+      KC_DB_USERNAME: keycloak
+      KC_DB_PASSWORD: keycloak_password
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: admin_password
+      KC_PROXY: edge
+      KC_HOSTNAME_STRICT: false
+      KC_HEALTH_ENABLED: true
+    ports:
+      - "8082:8080"
+      - "9000:9000" 
+    command: start-dev
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - keycloak_data:/opt/keycloak/data
+    networks:
+      - auth_network
+    healthcheck:
+      test: ['CMD-SHELL', '[ -f /tmp/HealthCheck.java ] || echo "public class HealthCheck { public static void main(String[] args) throws java.lang.Throwable { System.exit(java.net.HttpURLConnection.HTTP_OK == ((java.net.HttpURLConnection)new java.net.URL(args[0]).openConnection()).getResponseCode() ? 0 : 1); } }" > /tmp/HealthCheck.java && java /tmp/HealthCheck.java http://localhost:9000/health/live']
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    container_name: auth_redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - auth_network
+    command: redis-server --appendonly yes --requirepass redis_password
+    healthcheck:
+      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  authservice.webapi:
+    build:
+      context: .
+      dockerfile: AuthService.WebApi/Dockerfile
+    container_name: auth_service
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_URLS: http://+:5000
+      ConnectionStrings__DefaultConnection: Server=postgres;Database=auth;User Id=postgres;Password=postgres_password;Port=5432;
+      ConnectionStrings__Redis: redis:6379,password=redis_password
+      Auth__Issuer: myapp-auth
+      Auth__Audience: myapp-services
+      Auth__SecretKey: your_super_secret_key_min_32_chars_long_here_change_me_123456789
+      Auth__AccessTokenExpirationMinutes: 60
+      Auth__RefreshTokenExpirationDays: 30
+      Keycloak__Url: http://keycloak:8080
+      Keycloak__Realm: nirbi
+      Keycloak__AdminClientId: admin-cli
+      Keycloak__AdminClientSecret: CIVfy4OyV4G0jLdtRp7LTAgI0hyjiLL4
+      Keycloak__PublicClientId: nirbi
+      ServiceTokens__AccessTokenExpirationMinutes: 60
+      ServiceTokens__MaxTokenCacheMinutes: 50
+      Logging__LogLevel__Default: Information
+      Logging__LogLevel__Microsoft: Warning
+    ports:
+      - "5000:5000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      keycloak:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - auth_network
+    restart: unless-stopped
+
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: auth_pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@example.com
+      PGADMIN_DEFAULT_PASSWORD: admin_password
+      PGADMIN_CONFIG_SERVER_MODE: 'False'
+    ports:
+      - "5050:80"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - auth_network
+    restart: unless-stopped
+
+  minio:
+    image: minio/minio:latest
+    container_name: nirbi_minio
+    command: server /data --address ":9002" --console-address ":9001" 
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    ports:
+      - "9002:9002"
+      - "9001:9001"
+    volumes:
+      - minio_data:/data
+    networks:
+      - auth_network
+    restart: unless-stopped
+
+  redis-commander:
+    image: rediscommander/redis-commander:latest
+    container_name: auth_redis_commander
+    environment:
+      REDIS_HOSTS: local:redis:6379:0:redis_password
+    ports:
+      - "8081:8081"
+    depends_on:
+      - redis
+    networks:
+      - auth_network
+    restart: unless-stopped
+
+  dataservice.webapi:
+    build:
+      context: .
+      dockerfile: DataService.WebApi/Dockerfile
+    container_name: data_service
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_URLS: http://+:5000
+      ConnectionStrings__PostgreSql: Server=postgres;Database=data_service;User Id=postgres;Password=postgres_password;Port=5432;
+      S3Storage__BucketName: nirbi-data
+      S3Storage__ServiceUrl: http://minio:9002
+      S3Storage__AccessKey: minioadmin
+      S3Storage__SecretKey: minioadmin
+      S3Storage__ForcePathStyle: "true"
+      NirbiServiceAuth__ServiceJwt__Issuer: myapp-auth
+      NirbiServiceAuth__ServiceJwt__Audience: myapp-services
+      NirbiServiceAuth__ServiceJwt__SigningKey: your_super_secret_key_min_32_chars_long_here_change_me_123456789
+    ports:
+      - "5002:5000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      minio:
+        condition: service_started
+    networks:
+      - auth_network
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+    driver: local
+  keycloak_data:
+    driver: local
+  redis_data:
+    driver: local
+  minio_data:
+    driver: local
+
+networks:
+  auth_network:
+    driver: bridge

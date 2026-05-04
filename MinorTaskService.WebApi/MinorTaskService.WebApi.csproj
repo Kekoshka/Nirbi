@@ -6,6 +6,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <UserSecretsId>c92dcc1f-1fb4-454d-a22a-4c7a75807eb9</UserSecretsId>
     <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
+    <NoWarn>$(NoWarn);RMG012;RMG020</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>
@@ -35,11 +36,11 @@
   <ItemGroup>
     <Folder Include="Common\AvroSchemas\" />
     <Folder Include="Common\Behaviors\" />
-    <Folder Include="Common\Validators\" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\MinorTaskService.DataAccess.Postgres\MinorTaskService.DataAccess.Postgres.csproj" />
+    <ProjectReference Include="..\Nirbi.ServiceAuth\Nirbi.ServiceAuth.csproj" />
   </ItemGroup>
 
 </Project>

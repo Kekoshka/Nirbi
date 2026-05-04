@@ -7,9 +7,14 @@ namespace MinorTaskService.DataAccess.Postgres.Context
 {
     public class AppDbContext : DbContext
     {
-        IDomainEventDispatcher _dispatcher;
+        private readonly IDomainEventDispatcher _dispatcher;
 
-        public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
+        public AppDbContext(DbContextOptions<AppDbContext> options, IDomainEventDispatcher dispatcher)
+            : base(options)
+        {
+            _dispatcher = dispatcher;
+            Database.EnsureCreated();
+        }
 
         public DbSet<MinorTask> MinorTasks { get; set; }
         public DbSet<TaskParticipant> TaskParticipants { get; set; }

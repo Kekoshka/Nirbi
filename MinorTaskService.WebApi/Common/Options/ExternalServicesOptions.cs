@@ -2,8 +2,10 @@
 {
     public class ExternalServicesOptions
     {
-        public string CommunicationServiceAddress { get; set; }
-        public string KafkaAddress { get; set; }
-        public string SchemaRegistryAddress { get; set; }
+        public string CommunicationServiceAddress { get; set; } = string.Empty;
+        public string KafkaAddress { get; set; } = string.Empty;
+        public string SchemaRegistryAddress { get; set; } = string.Empty;
+        public string MinorTaskServiceTopic { get; set; } = string.Empty;
+        public string TaskParticipantServiceTopic { get; set; } = string.Empty;
     }
 }

@@ -7,6 +7,8 @@ namespace MinorTaskService.WebApi.Common.Mappers
     [Mapper]
     public static partial class StatusMapper
     {
-        public static IQueryable<GetStatusesDTO> ToGetStatusesDTO(this IQueryable<Status> value);
+        public static partial IQueryable<GetStatusesDTO> ToGetStatusesDTO(this IQueryable<Status> value);
+
+        public static partial List<GetStatusesResponse> ToGetStatusesResponse(this List<GetStatusesDTO> value);
     }
 }

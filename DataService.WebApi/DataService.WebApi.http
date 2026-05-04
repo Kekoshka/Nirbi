@@ -1,6 +1,34 @@
-@DataService.WebApi_HostAddress = http://localhost:5177
+@baseUrl = http://localhost:5177
+@token = <paste_service_or_user_jwt>
 
-GET {{DataService.WebApi_HostAddress}}/weatherforecast/
-Accept: application/json
+### Create empty file collection
+POST {{baseUrl}}/api/collections
+Authorization: Bearer {{token}}
 
-###
+### List files in collection
+GET {{baseUrl}}/api/collections/{{collectionId}}/files
+Authorization: Bearer {{token}}
+
+### Upload into collection (multipart — use Swagger or Postman for file body)
+# POST {{baseUrl}}/api/collections/{{collectionId}}/files
+# Authorization: Bearer {{token}}
+
+### Upload standalone file
+# POST {{baseUrl}}/api/files
+# Authorization: Bearer {{token}}
+
+### Get file metadata
+GET {{baseUrl}}/api/files/{{fileId}}/metadata
+Authorization: Bearer {{token}}
+
+### Download file
+GET {{baseUrl}}/api/files/{{fileId}}
+Authorization: Bearer {{token}}
+
+### Delete file
+DELETE {{baseUrl}}/api/files/{{fileId}}
+Authorization: Bearer {{token}}
+
+### Delete collection (and DB rows; S3 objects removed in service)
+DELETE {{baseUrl}}/api/collections/{{collectionId}}
+Authorization: Bearer {{token}}

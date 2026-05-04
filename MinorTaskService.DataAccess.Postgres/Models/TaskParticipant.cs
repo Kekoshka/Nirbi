@@ -1,4 +1,5 @@
 ﻿using MinorTaskService.DataAccess.Postgres.DomainEvents;
+using MinorTaskService.DataAccess.Postgres.DomainEvents.Events;
 using MinorTaskService.DataAccess.Postgres.DomainEvents.Interfaces;
 
 namespace MinorTaskService.DataAccess.Postgres.Models
@@ -11,7 +12,7 @@ namespace MinorTaskService.DataAccess.Postgres.Models
         public Guid MinorTaskId { get; set; }
         public Guid UserId { get; set; }
         public bool IsActive { get; set; }
-        public MinorTask MinorTask { get; set; }
+        public MinorTask MinorTask { get; set; } = null!;
 
         public TaskParticipant(Guid minorTaskId, Guid userId)
         {

@@ -3,7 +3,7 @@
     public class Status
     {
         public Guid Id { get; set; }
-        public string Name { get; set; }
-        public ICollection<MinorTask> MinorTasks { get; set; }
+        public string Name { get; set; } = string.Empty;
+        public ICollection<MinorTask> MinorTasks { get; set; } = new List<MinorTask>();
     }
 }

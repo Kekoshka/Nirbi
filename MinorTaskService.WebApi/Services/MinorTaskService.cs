@@ -91,7 +91,7 @@ namespace MinorTaskService.WebApi.Services
                 updateDto.Description,
                 updateDto.Latitude,
                 updateDto.Longitude,
-                updateDto.NumberVolunteers,
+                updateDto.NumberVolunteers, 
                 updateDto.Encouragement);
             await _context.SaveChangesAsync(cancellationToken);
         }

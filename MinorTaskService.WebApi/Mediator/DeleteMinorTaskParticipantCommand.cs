@@ -1,4 +1,5 @@
 ﻿using MediatR;
+using MinorTaskService.WebApi.Interfaces;
 
 namespace MinorTaskService.WebApi.Mediator
 {
@@ -8,14 +9,15 @@ namespace MinorTaskService.WebApi.Mediator
 
     public class DeleteMinorTaskParticipantCommandHandler : IRequestHandler<DeleteMinorTaskParticipantCommand>
     {
-        public DeleteMinorTaskParticipantCommandHandler()
+        ITaskParticipantService _taskParticipantService;
+        public DeleteMinorTaskParticipantCommandHandler(ITaskParticipantService taskParticipantService)
         {
-
+            _taskParticipantService = taskParticipantService;
         }
 
-        public Task Handle(DeleteMinorTaskParticipantCommand request, CancellationToken cancellationToken)
+        public async Task Handle(DeleteMinorTaskParticipantCommand request, CancellationToken cancellationToken)
         {
-            throw new NotImplementedException();
+            await _taskParticipantService.RemoveTaskParticipantAsync(request.MinorTaskId, request.ParticipantId, cancellationToken);
         }
     }
 }
