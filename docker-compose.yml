@@ -20,6 +20,93 @@ services:
       retries: 5
     restart: unless-stopped
 
+  kafka:
+    image: apache/kafka:4.2.0
+    container_name: kafka
+    ports:
+      - "9092:9092"
+      - "29092:29092" 
+    environment:
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_NODE_ID: 1
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_LISTENERS: INTERNAL://0.0.0.0:29092,EXTERNAL://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093
+      KAFKA_ADVERTISED_LISTENERS: INTERNAL://kafka:29092,EXTERNAL://localhost:9092,CONTROLLER://kafka:9093
+      KAFKA_LOG4J_LOGGERS: "kafka.request.logger=DEBUG"
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT,CONTROLLER:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_LOG_DIRS: /var/lib/kafka/data
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      CLUSTER_ID: "MkU3OEVBNTcwNTJENDM2Qk"
+    volumes:
+      - kafka-data:/var/lib/kafka/data
+    networks:
+      - auth_network
+
+  minio:
+    image: minio/minio:latest
+    container_name: nirbi_minio
+    command: server /data --address ":9002" --console-address ":9001" 
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    ports:
+      - "9002:9002"
+      - "9001:9001"
+    volumes:
+      - minio_data:/data
+    networks:
+      - auth_network
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    container_name: auth_redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - auth_network
+    command: redis-server --appendonly yes --requirepass redis_password
+    healthcheck:
+      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: auth_pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@example.com
+      PGADMIN_DEFAULT_PASSWORD: admin_password
+      PGADMIN_CONFIG_SERVER_MODE: 'False'
+    ports:
+      - "5050:80"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - auth_network
+    restart: unless-stopped
+
+  redis-commander:
+    image: rediscommander/redis-commander:latest
+    container_name: auth_redis_commander
+    environment:
+      REDIS_HOSTS: local:redis:6379:0:redis_password
+    ports:
+      - "8081:8081"
+    depends_on:
+      - redis
+    networks:
+      - auth_network
+    restart: unless-stopped
+
   keycloak:
     image: quay.io/keycloak/keycloak:latest
     container_name: auth_keycloak
@@ -52,23 +139,42 @@ services:
       start_period: 60s
     restart: unless-stopped
 
-  redis:
-    image: redis:7-alpine
-    container_name: auth_redis
+  minortaskservice.webapi:
+    build:
+      context: .
+      dockerfile: MinorTaskService.WebApi/Dockerfile
+    container_name: minor-task-service
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_URLS: http://+:5000
+      ConnectionStrings__PostgreSql: Server=postgres;Database=auth;User Id=postgres;Password=postgres_password;Port=5432;
+      NirbiServiceAuth__ServiceJwt__Issuer: myapp-auth
+      NirbiServiceAuth__ServiceJwt__Audience: myapp-services
+      NirbiServiceAuth__ServiceJwt__SigningKey: your_super_secret_key_min_32_chars_long_here_change_me_123456789
+      NirbiServiceAuth__AuthServiceBaseUrl: http://localhost:5000
+      NirbiServiceAuth__ClientId: minor-task-service
+      NirbiServiceAuth__ClientSecret: 
+      NirbiServiceAuth__TokenRefreshSkewSeconds: 120
+      ExternalServicesOptions__CommunicationServiceAddress: http://localhost:5001
+      ExternalServicesOptions__KafkaAddress: localhost:9092
+      ExternalServicesOptions__SchemaRegistryAddress: http://localhost:8081
+      ExternalServicesOptions__MinorTaskServiceTopic: minor-tasks
+      ExternalServicesOptions__TaskParticipantServiceTopic: task-participants
+      Logging__LogLevel__Default: Information
+      Logging__LogLevel__Microsoft: Warning
     ports:
-      - "6379:6379"
-    volumes:
-      - redis_data:/data
+      - "5003:5000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      keycloak:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     networks:
       - auth_network
-    command: redis-server --appendonly yes --requirepass redis_password
-    healthcheck:
-      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    restart: unless-stopped
-
+    restart: unless-stopped  
+    
   authservice.webapi:
     build:
       context: .
@@ -102,51 +208,6 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
-    networks:
-      - auth_network
-    restart: unless-stopped
-
-  pgadmin:
-    image: dpage/pgadmin4:latest
-    container_name: auth_pgadmin
-    environment:
-      PGADMIN_DEFAULT_EMAIL: admin@example.com
-      PGADMIN_DEFAULT_PASSWORD: admin_password
-      PGADMIN_CONFIG_SERVER_MODE: 'False'
-    ports:
-      - "5050:80"
-    depends_on:
-      postgres:
-        condition: service_healthy
-    networks:
-      - auth_network
-    restart: unless-stopped
-
-  minio:
-    image: minio/minio:latest
-    container_name: nirbi_minio
-    command: server /data --address ":9002" --console-address ":9001" 
-    environment:
-      MINIO_ROOT_USER: minioadmin
-      MINIO_ROOT_PASSWORD: minioadmin
-    ports:
-      - "9002:9002"
-      - "9001:9001"
-    volumes:
-      - minio_data:/data
-    networks:
-      - auth_network
-    restart: unless-stopped
-
-  redis-commander:
-    image: rediscommander/redis-commander:latest
-    container_name: auth_redis_commander
-    environment:
-      REDIS_HOSTS: local:redis:6379:0:redis_password
-    ports:
-      - "8081:8081"
-    depends_on:
-      - redis
     networks:
       - auth_network
     restart: unless-stopped

@@ -22,6 +22,7 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
     <PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.22.1" />
+    <PackageReference Include="Nirbi.ServiceAuth" Version="1.0.0" />
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="9.0.4" />
     <PackageReference Include="Refit" Version="10.1.6" />
     <PackageReference Include="Refit.HttpClientFactory" Version="10.1.6" />
@@ -35,15 +36,16 @@
   <ItemGroup>
     <Folder Include="Common\AvroSchemas\" />
     <Folder Include="Common\Behaviors\" />
-    <Folder Include="Common\DTO\" />
+    <Folder Include="Common\DTO\Request\" />
+    <Folder Include="Common\DTO\Response\" />
     <Folder Include="Common\Extensions\" />
-    <Folder Include="Common\Mappers\" />
-    <Folder Include="Common\Options\" />
     <Folder Include="Common\Validators\" />
     <Folder Include="Controllers\" />
-    <Folder Include="Interfaces\" />
     <Folder Include="Mediator\" />
-    <Folder Include="Services\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\ConfirmationService.DataAccess.Postgres\ConfirmationService.DataAccess.Postgres.csproj" />
   </ItemGroup>
 
 </Project>
