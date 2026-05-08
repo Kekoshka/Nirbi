@@ -6,6 +6,5 @@
         public string KafkaAddress { get; set; } = string.Empty;
         public string SchemaRegistryAddress { get; set; } = string.Empty;
         public string ConfirmationServiceTopic { get; set; } = string.Empty;
-        public string TaskParticipantServiceTopic { get; set; } = string.Empty;
     }
 }

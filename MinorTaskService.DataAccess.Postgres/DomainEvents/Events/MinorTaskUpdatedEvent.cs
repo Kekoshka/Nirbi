@@ -9,7 +9,8 @@ namespace MinorTaskService.DataAccess.Postgres.DomainEvents.Events
         decimal Latitude,
         decimal Longitude,
         int NumberVolunteers,
-        decimal Encouragement) : IDomainEvent
+        decimal Encouragement,
+        Guid listImagesId) : IDomainEvent
     {
         public Guid EventId { get; } = Guid.NewGuid();
         public DateTime OccurredOn { get; } = DateTime.UtcNow;

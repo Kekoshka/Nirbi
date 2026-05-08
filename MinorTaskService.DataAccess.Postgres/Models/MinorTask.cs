@@ -20,6 +20,10 @@ namespace MinorTaskService.DataAccess.Postgres.Models
         public Guid StatusId { get; set; }
         public Guid ConsumerId { get; set; }
         public DateTime CreatedAt { get; set; }
+        /// <summary>
+        /// Ссылка на FileCollection(содержащая только изображения) из DataService
+        /// </summary>
+        public Guid FileCollectionId { get; set; }
         public bool IsDeleted { get; set; }
         public Status Status { get; set; } = null!;
         public ICollection<TaskParticipant> EventParticipants { get; set; } = new List<TaskParticipant>();
@@ -32,7 +36,8 @@ namespace MinorTaskService.DataAccess.Postgres.Models
             int numberVolunteers,
             decimal encouragement,
             Guid statusId,
-            Guid consumerId)
+            Guid consumerId,
+            Guid fileCollectionId)
         {
             Id = Guid.NewGuid();
             CreatedAt = DateTime.UtcNow;
@@ -44,13 +49,14 @@ namespace MinorTaskService.DataAccess.Postgres.Models
             Encouragement = encouragement;
             StatusId = statusId;
             ConsumerId = consumerId;
+            FileCollectionId = fileCollectionId;
 
-            _domainEvents.Add(new MinorTaskCreatedEvent(Id, Name, Description, Latitude, Longitude, NumberVolunteers, Encouragement, StatusId, ConsumerId, CreatedAt));
+            _domainEvents.Add(new MinorTaskCreatedEvent(Id, Name, Description, Latitude, Longitude, NumberVolunteers, Encouragement, StatusId, ConsumerId, CreatedAt, FileCollectionId));
         }
 
         public void ClearDomainEvents() => _domainEvents.Clear();
 
-        public void Update(string name, string description, decimal latitude, decimal longitude, int numberVolunteers, decimal encouragement)
+        public void Update(string name, string description, decimal latitude, decimal longitude, int numberVolunteers, decimal encouragement, Guid fileCollectionId)
         {
             Name = name;
             Description = description;
@@ -58,7 +64,9 @@ namespace MinorTaskService.DataAccess.Postgres.Models
             Longitude = longitude;
             NumberVolunteers = numberVolunteers;
             Encouragement = encouragement;
-            _domainEvents.Add(new MinorTaskUpdatedEvent(Id, Name, Description, Latitude, Longitude, NumberVolunteers, Encouragement));
+            FileCollectionId = fileCollectionId;
+
+            _domainEvents.Add(new MinorTaskUpdatedEvent(Id, Name, Description, Latitude, Longitude, NumberVolunteers, Encouragement, FileCollectionId));
         }
 
         public void UpdateStatus(Guid statusId)

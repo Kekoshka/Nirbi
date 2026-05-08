@@ -34,7 +34,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="Common\AvroSchemas\" />
     <Folder Include="Common\Behaviors\" />
     <Folder Include="Common\DTO\Request\" />
     <Folder Include="Common\DTO\Response\" />
@@ -45,6 +44,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\Shared.Mapping\Shared.Mapping.csproj" />
     <ProjectReference Include="..\ConfirmationService.DataAccess.Postgres\ConfirmationService.DataAccess.Postgres.csproj" />
   </ItemGroup>
 

@@ -1,5 +1,6 @@
 ﻿using ConfirmationService.DataAccess.Postgres.DomainEvents;
 using ConfirmationService.DataAccess.Postgres.DomainEvents.Interfaces;
+using ConfirmationService.Mapping;
 using ConfirmationService.WebApi.Common.Options;
 using ConfirmationService.WebApi.Interfaces;
 using Microsoft.Extensions.Options;
@@ -24,7 +25,7 @@ namespace ConfirmationService.WebApi.DomainEvents
             await _kafkaService.ProduceAsync(
                 _externalServicesOptoins.ConfirmationServiceTopic,
                 domainEvent.ConfirmationId,
-                domainEvent,
+                domainEvent.ToAvro,
                 cancellationToken);
         }
     }

@@ -1,0 +1,31 @@
+{
+  "type": "record",
+  "name": "ConfirmationRespond",
+  "namespace": "ConfirmationService",
+  "fields": [
+    {
+      "name": "ConfirmationId",
+      "type": "string",
+      "logicalType": "uuid"
+    },
+    {
+      "name": "InitiatorId",
+      "type": "string",
+      "logicalType": "uuid"
+    },
+    {
+      "name": "IsAccepted",
+      "type": "boolean"
+    },
+    {
+      "name": "EventId",
+      "type": "string",
+      "logicalType": "uuid"
+    },
+    {
+      "name": "OccurredOn",
+      "type": "long",
+      "logicalType": "timestamp-millis"
+    }
+  ]
+}

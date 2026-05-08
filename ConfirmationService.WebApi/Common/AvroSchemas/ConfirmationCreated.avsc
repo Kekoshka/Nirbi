@@ -1,0 +1,59 @@
+{
+  "type": "record",
+  "name": "ConfirmationCreated",
+  "namespace": "ConfirmationService",
+  "fields": [
+    {
+      "name": "ConfirmationId",
+      "type": "string",
+      "logicalType": "uuid"
+    },
+    {
+      "name": "ConfirmationType",
+      "type": "string"
+    },
+    {
+      "name": "EntityId",
+      "type": "string",
+      "logicalType": "uuid"
+    },
+    {
+      "name": "InitiatorId",
+      "type": "string",
+      "logicalType": "uuid"
+    },
+    {
+      "name": "ReviewerId",
+      "type": "string",
+      "logicalType": "uuid"
+    },
+    {
+      "name": "Status",
+      "type": "string"
+    },
+    {
+      "name": "MetaData",
+      "type": "string"
+    },
+    {
+      "name": "CreatedAt",
+      "type": "long",
+      "logicalType": "timestamp-millis"
+    },
+    {
+      "name": "ExpiresAt",
+      "type": "long",
+      "logicalType": "timestamp-millis"
+    },
+    {
+      "name": "EventId",
+      "type": "string",
+      "logicalType": "uuid"
+    },
+    {
+      "name": "OccurredOn",
+      "type": "long",
+      "logicalType": "timestamp-millis"
+    }
+  ]
+}

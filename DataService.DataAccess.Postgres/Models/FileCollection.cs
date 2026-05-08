@@ -6,4 +6,5 @@ public class FileCollection
     public DateTime CreatedAtUtc { get; set; }
 
     public ICollection<StoredFile> Files { get; set; } = new List<StoredFile>();
+    public ICollection<Owner> Owners { get; set; }
 }

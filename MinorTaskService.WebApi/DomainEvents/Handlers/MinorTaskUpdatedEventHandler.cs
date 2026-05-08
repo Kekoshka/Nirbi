@@ -22,7 +22,7 @@ namespace MinorTaskService.WebApi.DomainEvents.Handlers
             await _kafkaService.ProduceAsync(
                 _externalServicesOptoins.MinorTaskServiceTopic,
                 domainEvent.MinorTaskId,
-                domainEvent,
+                domainEvent.ToAvro,
                 cancellationToken);
         }
     }

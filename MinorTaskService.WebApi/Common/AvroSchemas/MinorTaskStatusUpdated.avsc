@@ -1,0 +1,27 @@
+{
+  "type": "record",
+  "name": "MinorTaskStatusUpdated",
+  "namespace": "MinorTaskService",
+  "fields": [
+    {
+      "name": "MinorTaskId",
+      "type": "string",
+      "logicalType": "uuid"
+    },
+    {
+      "name": "StatusId",
+      "type": "string",
+      "logicalType": "uuid"
+    },
+    {
+      "name": "EventId",
+      "type": "string",
+      "logicalType": "uuid"
+    },
+    {
+      "name": "OccurredOn",
+      "type": "long",
+      "logicalType": "timestamp-millis"
+    }
+  ]
+}

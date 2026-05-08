@@ -34,11 +34,11 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="Common\AvroSchemas\" />
     <Folder Include="Common\Behaviors\" />
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\Shared.Mapping\Shared.Mapping.csproj" />
     <ProjectReference Include="..\MinorTaskService.DataAccess.Postgres\MinorTaskService.DataAccess.Postgres.csproj" />
     <ProjectReference Include="..\Nirbi.ServiceAuth\Nirbi.ServiceAuth.csproj" />
   </ItemGroup>

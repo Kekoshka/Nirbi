@@ -1,0 +1,70 @@
+{
+  "type": "record",
+  "name": "MinorTaskCreated",
+  "namespace": "MinorTaskService",
+  "fields": [
+    {
+      "name": "MinorTaskId",
+      "type": "string",
+      "logicalType": "uuid"
+    },
+    {
+      "name": "Name",
+      "type": "string"
+    },
+    {
+      "name": "Description",
+      "type": "string"
+    },
+    {
+      "name": "Latitude",
+      "type": "bytes",
+      "logicalType": "decimal",
+      "precision": 38,
+      "scale": 10
+    },
+    {
+      "name": "Longitude",
+      "type": "bytes",
+      "logicalType": "decimal",
+      "precision": 38,
+      "scale": 10
+    },
+    {
+      "name": "NumberVolunteers",
+      "type": "int"
+    },
+    {
+      "name": "Encouragement",
+      "type": "bytes",
+      "logicalType": "decimal",
+      "precision": 38,
+      "scale": 10
+    },
+    {
+      "name": "StatusId",
+      "type": "string",
+      "logicalType": "uuid"
+    },
+    {
+      "name": "ConsumerId",
+      "type": "string",
+      "logicalType": "uuid"
+    },
+    {
+      "name": "CreatedAt",
+      "type": "long",
+      "logicalType": "timestamp-millis"
+    },
+    {
+      "name": "EventId",
+      "type": "string",
+      "logicalType": "uuid"
+    },
+    {
+      "name": "OccurredOn",
+      "type": "long",
+      "logicalType": "timestamp-millis"
+    }
+  ]
+}

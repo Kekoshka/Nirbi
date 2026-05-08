@@ -44,7 +44,7 @@ namespace MinorTaskService.WebApi.Services
         {
             var minorTask = await _context.MinorTasks.FindAsync(minorTaskId);
             if (minorTask is null)
-                throw new NotFoundException($"Monor task with id {minorTaskId} not found");
+                throw new NotFoundException($"Minor task with id {minorTaskId} not found");
 
             return minorTask.ToGetMinorTaskDTO();
         }

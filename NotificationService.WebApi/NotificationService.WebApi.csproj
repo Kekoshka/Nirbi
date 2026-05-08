@@ -1,0 +1,39 @@
+﻿<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UserSecretsId>668ae489-2321-4c36-ba98-e07d5f6db307</UserSecretsId>
+    <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Content Remove="C:\Users\Kekoshka\.nuget\packages\librdkafka.redist\2.13.2\build\..\runtimes\win-x64\native\**" />
+    <Content Remove="C:\Users\Kekoshka\.nuget\packages\librdkafka.redist\2.13.2\build\..\runtimes\win-x86\native\**" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Confluent.Kafka" Version="2.13.2" />
+    <PackageReference Include="Confluent.SchemaRegistry.Serdes.Avro" Version="2.13.2" />
+    <PackageReference Include="ExceptionHandlingMiddlewareLib" Version="1.0.0" />
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="8.0.25" />
+    <PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.22.1" />
+    <PackageReference Include="Refit" Version="10.0.1" />
+    <PackageReference Include="Refit.HttpClientFactory" Version="10.0.1" />
+    <PackageReference Include="Riok.Mapperly" Version="4.3.1" />
+    <PackageReference Include="Swashbuckle.AspNetCore" Version="6.6.2" />
+    <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="8.16.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\Shared.Mapping\Shared.Mapping.csproj" />
+    <ProjectReference Include="..\Nirbi.ServiceAuth\Nirbi.ServiceAuth.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="Common\DTO\" />
+    <Folder Include="Common\ExternalApi\" />
+  </ItemGroup>
+
+</Project>

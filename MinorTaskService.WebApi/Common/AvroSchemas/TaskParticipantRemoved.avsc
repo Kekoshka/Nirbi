@@ -1,0 +1,27 @@
+{
+  "type": "record",
+  "name": "TaskParticipantRemoved",
+  "namespace": "MinorTaskService",
+  "fields": [
+    {
+      "name": "MinorTaskId",
+      "type": "string",
+      "logicalType": "uuid"
+    },
+    {
+      "name": "UserId",
+      "type": "string",
+      "logicalType": "uuid"
+    },
+    {
+      "name": "EventId",
+      "type": "string",
+      "logicalType": "uuid"
+    },
+    {
+      "name": "OccurredOn",
+      "type": "long",
+      "logicalType": "timestamp-millis"
+    }
+  ]
+}

@@ -1,0 +1,27 @@
+{
+  "type": "record",
+  "name": "ConfirmationRevoked",
+  "namespace": "ConfirmationService",
+  "fields": [
+    {
+      "name": "ConfirmationId",
+      "type": "string",
+      "logicalType": "uuid"
+    },
+    {
+      "name": "ReviewerId",
+      "type": "string",
+      "logicalType": "uuid"
+    },
+    {
+      "name": "EventId",
+      "type": "string",
+      "logicalType": "uuid"
+    },
+    {
+      "name": "OccurredOn",
+      "type": "long",
+      "logicalType": "timestamp-millis"
+    }
+  ]
+}

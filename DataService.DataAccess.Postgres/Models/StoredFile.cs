@@ -16,4 +16,5 @@ public class StoredFile
     public long SizeBytes { get; set; }
     public string? OriginalFileName { get; set; }
     public DateTime CreatedAtUtc { get; set; }
+    public ICollection<Owner> Owners { get; set; }
 }

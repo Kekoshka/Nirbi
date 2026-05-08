@@ -8,7 +8,7 @@ namespace DataService.WebApi.Controllers;
 
 [ApiController]
 [Route("api/files")]
-//[Authorize]
+[Authorize]
 public class FilesController : ControllerBase
 {
     private readonly IMediator _mediator;

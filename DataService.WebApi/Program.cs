@@ -1,5 +1,6 @@
 using DataService.WebApi.Common.Extensions;
 using Microsoft.OpenApi;
+using Nirbi.ServiceAuth.Extensions;
 using System.Reflection;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -8,6 +9,7 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddHttpContextAccessor();
+builder.Services.AddNirbiServiceAuth(builder.Configuration);
 
 builder.Services.AddDataServiceJwtAuthentication(builder.Configuration);
 builder.Services.UsePostgreSql(builder.Configuration);

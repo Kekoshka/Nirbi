@@ -12,7 +12,8 @@ namespace MinorTaskService.DataAccess.Postgres.DomainEvents.Events
         decimal Encouragement,
         Guid StatusId,
         Guid ConsumerId,
-        DateTime CreatedAt) : IDomainEvent
+        DateTime CreatedAt,
+        Guid FileCollectionId) : IDomainEvent
     {
         public Guid EventId { get; } = Guid.NewGuid();
         public DateTime OccurredOn { get; } = DateTime.UtcNow;
