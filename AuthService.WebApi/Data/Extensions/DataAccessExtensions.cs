@@ -5,7 +5,7 @@ namespace AuthService.WebApi.Data.Extensions
 {
     public static class DataAccessExtensions
     {
-        public static IServiceCollection AddDataAccess(
+        public static void AddDataAccess(
             this IServiceCollection services,
             IConfiguration configuration)
         {
@@ -16,8 +16,6 @@ namespace AuthService.WebApi.Data.Extensions
             );
 
             services.AddScoped<IServiceRepository, ServiceRepository>();
-
-            return services;
         }
 
         public static async Task ApplyMigrationsAsync(

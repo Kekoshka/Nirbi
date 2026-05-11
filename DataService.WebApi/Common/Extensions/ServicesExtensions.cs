@@ -54,6 +54,7 @@ public static class ServicesExtensions
 
     public static void AddDataServices(this IServiceCollection services)
     {
+        services.AddScoped<ICurrentUserService, CurrentUserService>();
         services.AddScoped<IDataObjectService, DataObjectService>();
     }
 }

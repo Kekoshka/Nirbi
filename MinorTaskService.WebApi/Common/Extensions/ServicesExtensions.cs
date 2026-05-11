@@ -22,15 +22,15 @@ namespace MinorTaskService.WebApi.Common.Extensions
                 if (connectionString is null)
                     throw new NotFoundException($"Connection string with name {ConfigNameConnectionStringPostgre} not found");
                 options.UseNpgsql(connectionString);
-                options.UseAsyncSeeding(async (dbContext, _, cancellationToken) =>
+                options.UseSeeding((dbContext, _) =>
                 {
                     var context = (AppDbContext)dbContext;
 
-                    if (await context.Statuses.AnyAsync())
+                    if ( context.Statuses.Any())
                         return;
 
-                    await context.Statuses.AddRangeAsync(StatusesSeed.Statuses, cancellationToken);
-                    await context.SaveChangesAsync(cancellationToken);
+                    context.Statuses.AddRange(StatusesSeed.Statuses);
+                    context.SaveChanges();
                 });
             });
         }

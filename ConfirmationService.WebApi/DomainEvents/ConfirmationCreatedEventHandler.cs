@@ -23,8 +23,8 @@ namespace ConfirmationService.WebApi.DomainEvents
         {
             await _kafkaService.ProduceAsync(
                 _externalServicesOptoins.ConfirmationServiceTopic,
-                domainEvent.ConfirmationId,
-                domainEvent.ToAvro,
+                domainEvent.ConfirmationId.ToString(),
+                domainEvent.ToAvro(),
                 cancellationToken);
         }
     }

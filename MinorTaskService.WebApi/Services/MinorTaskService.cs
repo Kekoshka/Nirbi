@@ -32,7 +32,8 @@ namespace MinorTaskService.WebApi.Services
                 createDto.NumberVolunteers,
                 createDto.Encouragement,
                 StatusType.InSearch,
-                _currentUserService.GetUserId());
+                _currentUserService.GetUserId(),
+                createDto.FileCollectionId);
 
             await _context.MinorTasks.AddAsync(minorTask, cancellationToken);
             await _context.SaveChangesAsync(cancellationToken);

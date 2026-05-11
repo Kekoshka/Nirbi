@@ -56,7 +56,7 @@ namespace MinorTaskService.DataAccess.Postgres.Models
 
         public void ClearDomainEvents() => _domainEvents.Clear();
 
-        public void Update(string name, string description, decimal latitude, decimal longitude, int numberVolunteers, decimal encouragement, Guid fileCollectionId)
+        public void Update(string name, string description, decimal latitude, decimal longitude, int numberVolunteers, decimal encouragement)
         {
             Name = name;
             Description = description;
@@ -64,9 +64,8 @@ namespace MinorTaskService.DataAccess.Postgres.Models
             Longitude = longitude;
             NumberVolunteers = numberVolunteers;
             Encouragement = encouragement;
-            FileCollectionId = fileCollectionId;
 
-            _domainEvents.Add(new MinorTaskUpdatedEvent(Id, Name, Description, Latitude, Longitude, NumberVolunteers, Encouragement, FileCollectionId));
+            _domainEvents.Add(new MinorTaskUpdatedEvent(Id, Name, Description, Latitude, Longitude, NumberVolunteers, Encouragement));
         }
 
         public void UpdateStatus(Guid statusId)

@@ -123,7 +123,7 @@ public class Confirmation : IHasDomainEvents
             Audits.Add(confirmationAudit);
         }
 
-        _domainEvents.Add(new ConfirmationRespondEvent(Id, InitiatorId, isAccepted));
+        _domainEvents.Add(new ConfirmationRespondEvent(Id, InitiatorId, ReviewerId,EntityId, isAccepted));
     }
 
     public void Revoke(Guid initiatorId)

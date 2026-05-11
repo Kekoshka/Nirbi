@@ -7,7 +7,7 @@ services:
       POSTGRES_PASSWORD: postgres_password
       POSTGRES_INITDB_ARGS: --encoding=UTF8 --locale=en_US.UTF-8
     ports:
-      - "5432:5432"
+      - "5434:5432"
     volumes:
       - ./init-databases.sql:/docker-entrypoint-initdb.d/01-init-databases.sql
       - postgres_data:/var/lib/postgresql/data
@@ -41,7 +41,7 @@ services:
       KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
       CLUSTER_ID: "MkU3OEVBNTcwNTJENDM2Qk"
     volumes:
-      - kafka-data:/var/lib/kafka/data
+      - kafka_data:/var/lib/kafka/data
     networks:
       - auth_network
 
@@ -219,6 +219,8 @@ services:
         condition: service_healthy
       kafka:
         condition: service_started
+      schema-registry:
+        condition: service_started
     networks:
       - auth_network
     restart: unless-stopped
@@ -259,7 +261,7 @@ services:
     environment:
       ASPNETCORE_ENVIRONMENT: Development
       ASPNETCORE_URLS: http://+:5000
-      ConnectionStrings__PostgreSql: Server=postgres;Database=auth;User Id=postgres;Password=postgres_password;Port=5432;
+      ConnectionStrings__PostgreSql: Server=postgres;Database=minor_task_service;User Id=postgres;Password=postgres_password;Port=5432;
       NirbiServiceAuth__ServiceJwt__Issuer: myapp-auth
       NirbiServiceAuth__ServiceJwt__Audience: myapp-services
       NirbiServiceAuth__ServiceJwt__SigningKey: your_super_secret_key_min_32_chars_long_here_change_me_123456789
@@ -286,6 +288,46 @@ services:
       - auth_network
     restart: unless-stopped  
 
+  confirmationservice.webapi:
+    build:
+      context: .
+      dockerfile: ConfirmationService.WebApi/Dockerfile
+    container_name: confirmation-service
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_URLS: http://+:5000
+      ExternalServicesOptions__KafkaAddress: kafka:29092
+      ExternalServicesOptions__SchemaRegistryAddress: http://schema-registry:8081
+      ExternalServicesOptions__ConfirmationServiceTopic: confirmation-service
+      ExternalServicesOptions__CommunicationServiceAddress: ""
+      NirbiServiceAuth__AuthServiceBaseUrl: http://authservice.webapi:5000
+      NirbiServiceAuth__ClientId: confirmation-service
+      NirbiServiceAuth__ClientSecret: rZ7BfrlKJWEe5Wt5Wsa5m72S9Xiwu8cRDae+R+lC+e4=
+      NirbiServiceAuth__TokenRefreshSkewSeconds: 120
+      NirbiServiceAuth__ServiceJwt__Issuer: myapp-auth
+      NirbiServiceAuth__ServiceJwt__Audience: myapp-services
+      NirbiServiceAuth__ServiceJwt__SigningKey: your_super_secret_key_min_32_chars_long_here_change_me_123456789
+      NirbiServiceAuth__Keycloak__Authority: http://keycloak:8080/realms/nirbi
+      NirbiServiceAuth__Keycloak__Audience: nirbi
+      NirbiServiceAuth__Keycloak__RequireHttpsMetadata: "false"
+      Logging__LogLevel__Default: Information
+      Logging__LogLevel__Microsoft: Warning
+    ports:
+      - "5004:5000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      keycloak:
+        condition: service_healthy
+      kafka:
+        condition: service_started
+      schema-registry:
+        condition: service_started
+    networks:
+      - auth_network
+    restart: unless-stopped
+
+
 volumes:
   postgres_data:
     driver: local
@@ -294,6 +336,8 @@ volumes:
   redis_data:
     driver: local
   minio_data:
+    driver: local
+  kafka_data:
     driver: local
 
 networks:

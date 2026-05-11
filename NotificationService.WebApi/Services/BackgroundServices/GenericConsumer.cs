@@ -1,7 +1,19 @@
-﻿public class GenericConsumer<TAvroMessage> : ConsumerBase<TAvroMessage>
+﻿using Avro.Specific;
+using Confluent.Kafka;
+using Confluent.SchemaRegistry;
+using Microsoft.AspNetCore.SignalR;
+using Microsoft.Extensions.Options;
+using NotificationService.WebApi.Common.Hubs;
+using NotificationService.WebApi.Common.Options;
+using NotificationService.WebApi.Services.BackgroundServices;
+using System.Text.Json;
+
+namespace NotificationService.WebApi.Services.BackgroundServices;
+
+public class GenericConsumer<TAvroMessage> : ConsumerBase<TAvroMessage>
     where TAvroMessage : class, ISpecificRecord
 {
-    private readonly Func<TAvroMessage, CancellationToken, Task<string?>> _recipientResolver;
+    private readonly Func<TAvroMessage, string?> _recipientResolver;
     private readonly Func<TAvroMessage, object> _eventMapper;
     private readonly string _hubMethod;
     private readonly string _topic;
@@ -15,7 +27,7 @@
         string topic,
         string hubMethod,
         Func<TAvroMessage, object> eventMapper,
-        Func<TAvroMessage, CancellationToken, Task<string?>> recipientResolver)
+        Func<TAvroMessage, string?> recipientResolver)
         : base(externalServicesOptions, kafkaConsumersOptions, schemaRegistryClient, hub, logger)
     {
         _topic = topic;
@@ -32,26 +44,45 @@
         {
             while (!cancellationToken.IsCancellationRequested)
             {
-                var consumeResult = _consumer.Consume(cancellationToken);
-                var message = consumeResult.Message.Value;
-
-                if (message is null) continue;
-
-                var recipientId = await _recipientResolver(message, cancellationToken);
-
-                if (recipientId is null)
+                try
                 {
-                    _logger.LogError(
-                        "Notification [{HubMethod}] was not sent: recipient not found. Message: {Message}",
-                        _hubMethod, message);
-                    continue;
+                    var consumeResult = _consumer.Consume(cancellationToken);
+                    var message = consumeResult.Message.Value;
+
+                    if (message is null) continue;
+
+                    var recipientId = _recipientResolver(message);
+
+                    if (recipientId is null)
+                    {
+                        _logger.LogError(
+                            "Notification [{HubMethod}] was not sent: recipient not found.",
+                            _hubMethod);
+                        continue;
+                    }
+
+                    var json = JsonSerializer.Serialize(_eventMapper(message));
+                    await _hub.Clients
+                        .User(recipientId)
+                        .SendAsync(_hubMethod, json, cancellationToken);
                 }
+                catch (ConsumeException ex) when (ex.Error.Code == ErrorCode.UnknownTopicOrPart)
+                {
+                    _logger.LogWarning(
+                        "Topic not available yet for [{HubMethod}], retrying in 5s...",
+                        _hubMethod);
 
-                var json = JsonSerializer.Serialize(_eventMapper(message));
-
-                await _hub.Clients
-                    .User(recipientId)
-                    .SendAsync(_hubMethod, json, cancellationToken);
+                    await Task.Delay(TimeSpan.FromSeconds(5), cancellationToken);
+                }
+                catch (OperationCanceledException)
+                {
+                    break;
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Unexpected error in consumer [{HubMethod}]", _hubMethod);
+                    await Task.Delay(TimeSpan.FromSeconds(5), cancellationToken);
+                }
             }
         }, cancellationToken);
 

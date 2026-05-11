@@ -6,7 +6,8 @@
         decimal Latitude,
         decimal Longitude,
         int NumberVolunteers,
-        decimal Encouragement);
+        decimal Encouragement,
+        Guid FileCollectionId);
 
     public record class UpdateMinorTaskDTO(
         Guid Id,
@@ -16,6 +17,7 @@
         decimal Longitude,
         int NumberVolunteers,
         decimal Encouragement);
+
     public record class GetMinorTaskDTO(
         string Name,
         string Description,
@@ -25,14 +27,18 @@
         decimal Encouragement,
         string Status,
         Guid ConsumerId,
-        DateTime CreatedAt);
+        DateTime CreatedAt,
+        Guid FileCollectionId);
+
     public record class GetMinorTasksDTO(
+        Guid Id,
         string Name,
         string Description,
         decimal Latitude,
         decimal Longitude,
         decimal Encouragement,
-        DateTime CreatedAt);
+        DateTime CreatedAt,
+        Guid FileCollectionId);
 
     public record class GetStatusesDTO(
         Guid Id,

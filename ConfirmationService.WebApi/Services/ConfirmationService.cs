@@ -21,9 +21,7 @@ public class ConfirmationService : IConfirmationService
 
     public ConfirmationService(
         ConfirmationDbContext context,
-        IDomainEventDispatcher eventDispatcher,
-        ICurrentUserService currentUserService,
-        ILogger<ConfirmationService> logger)
+        ICurrentUserService currentUserService)
     {
         _context = context;
         _currentUserService = currentUserService;

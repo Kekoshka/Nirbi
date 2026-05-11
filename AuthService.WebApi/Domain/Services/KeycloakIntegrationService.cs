@@ -3,6 +3,7 @@ using AuthService.WebApi.External.Keycloak;
 using AuthService.WebApi.External.Keycloak.Models;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Options;
+using Refit;
 
 namespace AuthService.WebApi.Domain.Services
 {
@@ -62,13 +63,21 @@ namespace AuthService.WebApi.Domain.Services
                     }
                 }
             };
+            try
+            {
+                await _keycloakClient.CreateUserAsync(
+                    _keycloakOptions.Realm,
+                    $"Bearer {adminToken}",
+                    user,
+                    cancellationToken);
+            }
+            catch (ApiException ex)
+            {
+                var content = await ex.GetContentAsAsync<object>();
+                Console.Write("Keycloak error:" +  content);
+                throw;
 
-            await _keycloakClient.CreateUserAsync(
-                _keycloakOptions.Realm,
-                $"Bearer {adminToken}",
-                user,
-                cancellationToken
-            );
+            }
 
             return await LoginAsync(username, password, cancellationToken);
         }

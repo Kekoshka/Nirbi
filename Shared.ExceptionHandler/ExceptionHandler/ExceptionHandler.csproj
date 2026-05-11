@@ -1,0 +1,28 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+	  
+	<PackageId>ExceptionHandlingMiddlewareLib</PackageId>
+    <Version>1.0.0</Version>
+    <Authors>Kekoshka</Authors>
+    <Description>Middleware для глобальной обработки исключений в ASP.NET Core</Description>
+    <PackageTags>aspnetcore middleware exception handling</PackageTags>
+    <RepositoryUrl>https://github.com/Kekoshka/ExceptionHandlingMiddlewareLib</RepositoryUrl>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Http.Abstractions" Version="2.3.9" />
+    <PackageReference Include="Microsoft.AspNetCore.Http.Extensions" Version="2.3.9" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="9.0.14">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.5" />
+    <PackageReference Include="Refit" Version="10.1.6" />
+  </ItemGroup>
+
+</Project>

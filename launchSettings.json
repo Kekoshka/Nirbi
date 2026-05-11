@@ -4,14 +4,18 @@
       "commandName": "DockerCompose",
       "commandVersion": "1.0",
       "serviceActions": {
-        "authservice.webapi": "StartWithoutDebugging",
+        "authservice.webapi": "StartDebugging",
         "keycloak": "StartWithoutDebugging",
         "pgadmin": "StartWithoutDebugging",
         "postgres": "StartWithoutDebugging",
         "redis": "StartWithoutDebugging",
         "redis-commander": "StartWithoutDebugging",
         "dataservice.webapi": "StartDebugging",
-        "minio": "StartWithoutDebugging"
+        "minio": "StartWithoutDebugging",
+        "kafka": "StartWithoutDebugging",
+        "minortaskservice.webapi": "StartDebugging",
+        "notificationservice.webapi": "StartDebugging",
+        "schema-registry": "StartWithoutDebugging"
       }
     }
   }

@@ -1,6 +1,7 @@
 ﻿using Microsoft.Extensions.Options;
 using MinorTaskService.DataAccess.Postgres.DomainEvents.Events;
 using MinorTaskService.DataAccess.Postgres.DomainEvents.Interfaces;
+using MinorTaskService.Mapping;
 using MinorTaskService.WebApi.Common.Options;
 using MinorTaskService.WebApi.Interfaces;
 
@@ -22,8 +23,8 @@ namespace MinorTaskService.WebApi.DomainEvents.Handlers
         {
             await _kafkaService.ProduceAsync(
                 _externalServicesOptoins.MinorTaskServiceTopic,
-                domainEvent.MinorTaskId,
-                domainEvent.ToAvro,
+                domainEvent.MinorTaskId.ToString(),
+                domainEvent.ToAvro(),
                 cancellationToken);
         }
     }

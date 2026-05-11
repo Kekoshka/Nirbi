@@ -43,6 +43,7 @@ namespace AuthService.WebApi.Hosting
                     var existing = await tokenService.GetServiceAsync(entry.ServiceId, cancellationToken)
                         .ConfigureAwait(false);
 
+
                     if (existing == null)
                     {
                         var request = new RegisterServiceRequest

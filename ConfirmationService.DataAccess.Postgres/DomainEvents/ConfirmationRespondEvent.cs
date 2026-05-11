@@ -5,6 +5,8 @@ namespace ConfirmationService.WebApi.DomainEvents.Events
     public record class ConfirmationRespondEvent(
         Guid ConfirmationId,
         Guid InitiatorId,
+        Guid ReviewerId,
+        Guid EntityId,
         bool IsAccepted) 
         : IDomainEvent
     {

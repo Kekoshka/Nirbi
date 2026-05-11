@@ -1,4 +1,5 @@
 ﻿using NotificationService.WebApi.Common.AvroSchemas;
+using NotificationService.WebApi.Common.Events;
 using Shared.Mapping;
 
 namespace NotificationService.Mapping;

@@ -8,7 +8,6 @@ namespace MinorTaskService.WebApi.Common.Mappers;
 [Mapper]
 public static partial class MinorTaskMapper
 {
-    [MapperIgnoreSource(nameof(CreateMinorTaskCommand.Images))]
     public static partial CreateMinorTaskDTO ToCreateMinorTaskDTO(this CreateMinorTaskCommand value);
 
     [MapProperty(nameof(MinorTask.Status.Name), nameof(GetMinorTaskDTO.Status))]

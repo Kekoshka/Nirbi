@@ -47,15 +47,6 @@ namespace NotificationService.WebApi.Common.Extensions
         }
 
         /// <summary>
-        /// Расширение для регистрации Hosted сервисов слушателей Kafka
-        /// </summary>
-        public static void AddKafkaConsumers(this IServiceCollection services)
-        {
-            services.AddHostedService<OrderCreatedConsumer>();
-            services.AddHostedService<PaymentUpdatedConsumer>();
-        }
-
-        /// <summary>
         /// Регистрация всех сервисов, находящихся в проекте
         /// </summary>
         /// <param name="services"></param>

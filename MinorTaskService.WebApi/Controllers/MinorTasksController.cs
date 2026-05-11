@@ -1,4 +1,5 @@
 ﻿using MediatR;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using MinorTaskService.WebApi.Common.DTO;
 using MinorTaskService.WebApi.Mediator;
@@ -7,6 +8,7 @@ namespace MinorTaskService.WebApi.Controllers;
 
 [Route("api/")]
 [ApiController]
+[Authorize]
 public class MinorTasksController : ControllerBase
 {
     private readonly IMediator _mediator;

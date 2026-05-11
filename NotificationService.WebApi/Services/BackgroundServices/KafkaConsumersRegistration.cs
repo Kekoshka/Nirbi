@@ -1,7 +1,13 @@
-﻿using NotificationService.Mapping;
+﻿using Confluent.SchemaRegistry;
+using Microsoft.AspNetCore.SignalR;
+using Microsoft.Extensions.Options;
+using NotificationService.Mapping;
 using NotificationService.WebApi.Common.AvroSchemas;
+using NotificationService.WebApi.Common.Hubs;
 using NotificationService.WebApi.Common.Options;
+using NotificationService.WebApi.Interfaces;
 
+namespace NotificationService.WebApi.Services.BackgroundServices;
 public static class KafkaConsumersRegistration
 {
     public static IServiceCollection AddKafkaConsumers(
@@ -11,13 +17,10 @@ public static class KafkaConsumersRegistration
         // ── ConfirmationService ────────────────────────────────────────────
 
         services.AddHostedService(sp => new GenericConsumer<ConfirmationCreated>(
-            topic: options.ConfirmationCreatedTopic,
+            topic: options.ConfirmationServiceTopic,
             hubMethod: "ShowConfirmationCreated",
             eventMapper: msg => msg.ToEvent(),
-            recipientResolver: async (msg, ct) =>
-            {
-                return msg.ReviewerId
-            },
+            recipientResolver: (msg) => msg.ReviewerId,
             externalServicesOptions: sp.GetRequiredService<IOptions<ExternalServicesOptions>>(),
             kafkaConsumersOptions: sp.GetRequiredService<IOptions<KafkaConsumersOptions>>(),
             schemaRegistryClient: sp.GetRequiredService<ISchemaRegistryClient>(),
@@ -26,15 +29,10 @@ public static class KafkaConsumersRegistration
         ));
 
         services.AddHostedService(sp => new GenericConsumer<ConfirmationRespond>(
-            topic: options.ConfirmationRespondTopic,
+            topic: options.ConfirmationServiceTopic,
             hubMethod: "ShowConfirmationRespond",
             eventMapper: msg => msg.ToEvent(),
-            recipientResolver: async (msg, ct) =>
-            {
-                var user = await sp.GetRequiredService<IUserServiceApi>()
-                    .GetUserAsync(Guid.Parse(msg.InitiatorId), ct);
-                return user?.Email;
-            },
+            recipientResolver: (msg) => msg.InitiatorId,
             externalServicesOptions: sp.GetRequiredService<IOptions<ExternalServicesOptions>>(),
             kafkaConsumersOptions: sp.GetRequiredService<IOptions<KafkaConsumersOptions>>(),
             schemaRegistryClient: sp.GetRequiredService<ISchemaRegistryClient>(),
@@ -43,15 +41,10 @@ public static class KafkaConsumersRegistration
         ));
 
         services.AddHostedService(sp => new GenericConsumer<ConfirmationRevoked>(
-            topic: options.ConfirmationRevokedTopic,
+            topic: options.ConfirmationServiceTopic,
             hubMethod: "ShowConfirmationRevoked",
             eventMapper: msg => msg.ToEvent(),
-            recipientResolver: async (msg, ct) =>
-            {
-                var user = await sp.GetRequiredService<IUserServiceApi>()
-                    .GetUserAsync(Guid.Parse(msg.ReviewerId), ct);
-                return user?.Email;
-            },
+            recipientResolver: (msg) => msg.ReviewerId,
             externalServicesOptions: sp.GetRequiredService<IOptions<ExternalServicesOptions>>(),
             kafkaConsumersOptions: sp.GetRequiredService<IOptions<KafkaConsumersOptions>>(),
             schemaRegistryClient: sp.GetRequiredService<ISchemaRegistryClient>(),

@@ -1,13 +1,26 @@
 ﻿using ConfirmationService.DataAccess.Models;
 using ConfirmationService.WebApi.Common.DTO;
-using Riok.Mapperly.Abstractions;
 
 namespace ConfirmationService.WebApi.Common.Mappers
 {
-    [Mapper]
-    public static partial class ConfirmationMapper
+    public static class ConfirmationMapper
     {
-        public static partial Confirmation ToConfirmation(this CreateConfirmationRequest value);
+        public static Confirmation ToConfirmation(this CreateConfirmationRequest value, Guid initiatorId)
+        {
+            var metaData = value.MetaData != null
+                ? System.Text.Json.JsonSerializer.Serialize(value.MetaData)
+                : "{}";
 
+            var expiresAt = DateTime.UtcNow.AddHours(value.ExpirationHours);
+
+            return new Confirmation(
+                value.ConfirmationType,
+                value.EntityId,
+                initiatorId,         
+                value.ReviewerId,
+                metaData,
+                expiresAt
+            );
+        }
     }
 }

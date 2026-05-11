@@ -30,7 +30,7 @@ public class FileUploadOperationFilter : IOperationFilter
                                     Format = "binary" // Это ключевой момент для появления кнопки выбора файла
                                 }) as IDictionary<string, IOpenApiSchema>
                         }
-                    }
+                    } 
                 }
             };
         }

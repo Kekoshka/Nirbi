@@ -1,4 +1,5 @@
 using ConfirmationService.WebApi.Common.DTO;
+using ConfirmationService.WebApi.Common.DTO.ServiceDTO;
 using ConfirmationService.WebApi.Services;
 using Microsoft.AspNetCore.Mvc;
 
@@ -26,8 +27,8 @@ public class ConfirmationsController : ControllerBase
     public async Task<ActionResult<ConfirmationResponse>> CreateConfirmation(
         CreateConfirmationRequest request)
     {
-        var confirmation = await _confirmationService.CreateConfirmationAsync(request);
-        return Ok(confirmation.);
+        var confirmationId = await _confirmationService.CreateConfirmationAsync(request);
+        return Ok(confirmationId);
     }
 
     /// <summary>
@@ -46,7 +47,7 @@ public class ConfirmationsController : ControllerBase
     [HttpGet("reviewer/{reviewerId}")]
     public async Task<IActionResult> GetByReviewer(Guid reviewerId)
     {
-        var confirmations = await _confirmationService.GetConfirmationsByReviewerAsync(reviewerId);
+        var confirmations = await _confirmationService.GetConfirmationsByReviewerAsync();
         return Ok(confirmations);
     }
 
@@ -57,7 +58,7 @@ public class ConfirmationsController : ControllerBase
     [HttpGet("initiator/{initiatorId}")]
     public async Task<ActionResult<IEnumerable<ConfirmationResponse>>> GetByInitiator(Guid initiatorId)
     {
-        var confirmations = await _confirmationService.GetConfirmationsByInitiatorAsync(initiatorId);
+        var confirmations = await _confirmationService.GetConfirmationsByInitiatorAsync();
         return Ok(confirmations);
     }
 
@@ -69,8 +70,12 @@ public class ConfirmationsController : ControllerBase
         Guid confirmationId,
         RespondToConfirmationRequest request)
     {
-        var confirmation = await _confirmationService.RespondToConfirmationAsync(confirmationId, request);
-        return Ok(confirmation);
+        RespondToConfirmationDTO respondToConfirmationDTO = new(
+            confirmationId, 
+            request.IsAccepted, 
+            request.RejectionReason);
+        await _confirmationService.RespondToConfirmationAsync(respondToConfirmationDTO);
+        return NoContent();
     }
 
     /// <summary>
@@ -81,22 +86,7 @@ public class ConfirmationsController : ControllerBase
         Guid id,
         [FromQuery] Guid initiatorId)
     {
-        try
-        {
-            var confirmation = await _confirmationService.RevokeConfirmationAsync(id, initiatorId);
-            return Ok(confirmation);
-        }
-        catch (KeyNotFoundException ex)
-        {
-            return NotFound(new { message = ex.Message });
-        }
-        catch (UnauthorizedAccessException ex)
-        {
-            return Forbid();
-        }
-        catch (InvalidOperationException ex)
-        {
-            return BadRequest(new { message = ex.Message });
-        }
+        await _confirmationService.RevokeConfirmationAsync(id);
+        return NoContent();
     }
 }

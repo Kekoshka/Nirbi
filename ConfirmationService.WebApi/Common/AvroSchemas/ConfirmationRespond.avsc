@@ -9,7 +9,17 @@
       "logicalType": "uuid"
     },
     {
+      "name": "EntityId",
+      "type": "string",
+      "logicalType": "uuid"
+    },
+    {
       "name": "InitiatorId",
+      "type": "string",
+      "logicalType": "uuid"
+    },
+    {
+      "name": "ReviewerId",
       "type": "string",
       "logicalType": "uuid"
     },

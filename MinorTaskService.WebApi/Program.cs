@@ -1,9 +1,10 @@
-using System.Reflection;
+using ExceptionHandler;
 using MinorTaskService.WebApi.Common.Extensions;
 using MinorTaskService.WebApi.Common.Options;
 using MinorTaskService.WebApi.Interfaces;
 using MinorTaskService.WebApi.Services;
 using Nirbi.ServiceAuth.Extensions;
+using System.Reflection;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -32,6 +33,7 @@ builder.Services.AddSingleton<IKafkaService, KafkaService>();
 builder.Services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(Assembly.GetExecutingAssembly()));
 
 var app = builder.Build();
+//app.UseExceptionHandling();
 
 if (app.Environment.IsDevelopment())
 {

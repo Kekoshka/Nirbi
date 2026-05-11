@@ -21,7 +21,7 @@ namespace MinorTaskService.WebApi.Mediator
         decimal Longitude,
         int NumberVolunteers,
         decimal Encouragement,
-        Guid Images) : IRequest<Guid>;
+        Guid FileCollectionId) : IRequest<Guid>;
 
     public class CreateMinorTaskCommandHandler : IRequestHandler<CreateMinorTaskCommand, Guid>
     {

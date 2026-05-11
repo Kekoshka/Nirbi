@@ -3,6 +3,7 @@ using NotificationService.WebApi.Common.Extensions;
 using NotificationService.WebApi.Common.Hubs;
 using NotificationService.WebApi.Common.Options;
 using Nirbi.ServiceAuth.Extensions;
+using NotificationService.WebApi.Services.BackgroundServices;
 
 var builder = WebApplication.CreateBuilder(args);
 

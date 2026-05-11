@@ -4,7 +4,6 @@ using DataService.WebApi.Common.DTO;
 using DataService.WebApi.Interfaces;
 using ExceptionHandler.Exceptions;
 using Microsoft.EntityFrameworkCore;
-using MinorTaskService.WebApi.Interfaces;
 using Nirbi.ServiceAuth.Identity;
 
 namespace DataService.WebApi.Services;

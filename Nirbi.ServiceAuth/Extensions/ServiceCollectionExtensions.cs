@@ -81,7 +81,25 @@ public static class ServiceCollectionExtensions
                 options.Authority = snapshot.Keycloak!.Authority;
                 options.Audience = snapshot.Keycloak.Audience;
                 options.RequireHttpsMetadata = snapshot.Keycloak.RequireHttpsMetadata;
-                options.TokenValidationParameters.NameClaimType = "preferred_username";
+                options.Events = new JwtBearerEvents
+                {
+                    OnAuthenticationFailed = context =>
+                    {
+                        context.Response.Headers["X-Auth-Error"] = context.Exception.Message;
+                        Console.WriteLine($"JWT Auth failed: {context.Exception}");
+                        return Task.CompletedTask;
+                    },
+                    OnChallenge = context =>
+                    {
+                        Console.WriteLine($"JWT Challenge: {context.Error}, {context.ErrorDescription}");
+                        return Task.CompletedTask;
+                    },
+                    OnTokenValidated = context =>
+                    {
+                        Console.WriteLine("JWT Token validated successfully");
+                        return Task.CompletedTask;
+                    }
+                };
             });
         }
 

@@ -18,6 +18,10 @@
     <PackageReference Include="Confluent.SchemaRegistry.Serdes.Avro" Version="2.13.2" />
     <PackageReference Include="ExceptionHandlingMiddlewareLib" Version="1.0.0" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="8.0.25" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="9.0.14">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
     <PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.22.1" />
     <PackageReference Include="Refit" Version="10.0.1" />
     <PackageReference Include="Refit.HttpClientFactory" Version="10.0.1" />

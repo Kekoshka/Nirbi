@@ -1,5 +1,5 @@
 ﻿using ExceptionHandler.Exceptions;
-using MinorTaskService.WebApi.Interfaces;
+using DataService.WebApi.Interfaces;
 using System.Security.Claims;
 
 namespace DataService.WebApi.Services

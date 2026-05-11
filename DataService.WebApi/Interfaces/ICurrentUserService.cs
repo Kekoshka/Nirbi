@@ -1,4 +1,4 @@
-﻿namespace MinorTaskService.WebApi.Interfaces
+﻿namespace DataService.WebApi.Interfaces
 {
     public interface ICurrentUserService
     {
