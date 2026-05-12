@@ -67,6 +67,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Shared.Mapping", "..\Shared
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ExceptionHandler", "Shared.ExceptionHandler\ExceptionHandler\ExceptionHandler.csproj", "{E2833A5F-4487-33D9-CA57-26097C38A7E4}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Gateway", "Gateway", "{1750D6E2-4484-4009-B093-06A67CA710D3}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GatewayService.WebApi", "GatewayService.WebApi\GatewayService.WebApi.csproj", "{55B58B79-0B36-49BA-A49A-AAD98EF0DB3B}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -149,6 +153,10 @@ Global
 		{E2833A5F-4487-33D9-CA57-26097C38A7E4}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{E2833A5F-4487-33D9-CA57-26097C38A7E4}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{E2833A5F-4487-33D9-CA57-26097C38A7E4}.Release|Any CPU.Build.0 = Release|Any CPU
+		{55B58B79-0B36-49BA-A49A-AAD98EF0DB3B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{55B58B79-0B36-49BA-A49A-AAD98EF0DB3B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{55B58B79-0B36-49BA-A49A-AAD98EF0DB3B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{55B58B79-0B36-49BA-A49A-AAD98EF0DB3B}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -172,6 +180,7 @@ Global
 		{1651B6B7-EAF8-E8E5-AEC8-CB6252BD3FE7} = {22DF0C0F-BDE6-41F1-8DBE-81CA717AFA49}
 		{FDC4B8ED-6E67-47FF-8977-7BC470EA6954} = {875554C8-B74A-4389-9190-6A255CCCF505}
 		{E2833A5F-4487-33D9-CA57-26097C38A7E4} = {875554C8-B74A-4389-9190-6A255CCCF505}
+		{55B58B79-0B36-49BA-A49A-AAD98EF0DB3B} = {1750D6E2-4484-4009-B093-06A67CA710D3}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {7C06E773-3264-4CD2-AD6C-7FBDC037B43A}
