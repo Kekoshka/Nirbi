@@ -36,8 +36,10 @@ public class MinorTaskListItemResponse
     public double Longitude { get; set; }
     public int NumberVolunteers { get; set; }
     public double Encouragement { get; set; }
-    /// <summary>URL первого изображения из коллекции</summary>
-    public string? PreviewImageUrl { get; set; }
+    /// <summary>Байты первого изображения в base64</summary>
+    public string? PreviewImageData { get; set; }
+    /// <summary>MIME-тип: image/jpeg, image/png и т.д.</summary>
+    public string? PreviewImageContentType { get; set; }
 }
 
 /// <summary>Ответ для одной задачи — полный список изображений</summary>
@@ -64,6 +66,6 @@ public class FileMetadataDto
     public long SizeBytes { get; set; }
     public string? OriginalFileName { get; set; }
     public DateTime CreatedAtUtc { get; set; }
-    /// <summary>Ссылка для скачивания (добавляется gateway'ем)</summary>
-    public string? DownloadUrl { get; set; }
+    /// <summary>Байты файла в base64</summary>
+    public string? Data { get; set; }
 }

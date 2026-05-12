@@ -1,3 +1,4 @@
+using ExceptionHandler.Exceptions;
 using GatewayService.WebApi.Common.DTO;
 using System.Net.Http.Headers;
 using System.Text;
@@ -50,7 +51,9 @@ public class MinorTaskAggregator : IMinorTaskAggregator
             if (filesResponse.IsSuccessStatusCode)
             {
                 var files = await DeserializeAsync<List<FileMetadataDto>>(filesResponse) ?? [];
-                detail.Images = files.Select(f => EnrichWithDownloadUrl(f)).ToList();
+                var enriched = await Task.WhenAll(
+                    files.Select(f => EnrichWithFileDataAsync(f, dataClient)));
+                detail.Images = [.. enriched];
             }
         }
 
@@ -66,6 +69,8 @@ public class MinorTaskAggregator : IMinorTaskAggregator
 
         var query = BuildQueryString(limit, from, to);
         var tasksResponse = await taskClient.GetAsync($"/api/tasks{query}");
+        if (!tasksResponse.IsSuccessStatusCode)
+            throw new ForbiddenException();
         if (!tasksResponse.IsSuccessStatusCode) return [];
 
         var tasks = await DeserializeAsync<List<MinorTaskResponse>>(tasksResponse) ?? [];
@@ -92,7 +97,18 @@ public class MinorTaskAggregator : IMinorTaskAggregator
                     var files = await DeserializeAsync<List<FileMetadataDto>>(filesResponse) ?? [];
                     var first = files.OrderBy(f => f.SortOrder).FirstOrDefault();
                     if (first is not null)
-                        item.PreviewImageUrl = BuildFileDownloadUrl(first.Id);
+                    {
+                        // Скачиваем байты только первого файла
+                        var fileResponse = await dataClient.GetAsync($"/api/files/{first.Id}");
+                        if (!fileResponse.IsSuccessStatusCode)
+                            throw new ForbiddenException();
+                        if (fileResponse.IsSuccessStatusCode)
+                        {
+                            var bytes = await fileResponse.Content.ReadAsByteArrayAsync();
+                            item.PreviewImageData = Convert.ToBase64String(bytes);
+                            item.PreviewImageContentType = first.ContentType;
+                        }
+                    }
                 }
             }
 
@@ -181,9 +197,14 @@ public class MinorTaskAggregator : IMinorTaskAggregator
         Encouragement = task.Encouragement
     };
 
-    private FileMetadataDto EnrichWithDownloadUrl(FileMetadataDto file)
+    private async Task<FileMetadataDto> EnrichWithFileDataAsync(FileMetadataDto file, HttpClient dataClient)
     {
-        file.DownloadUrl = BuildFileDownloadUrl(file.Id);
+        var response = await dataClient.GetAsync($"/api/files/{file.Id}");
+        if (response.IsSuccessStatusCode)
+        {
+            var bytes = await response.Content.ReadAsByteArrayAsync();
+            file.Data = Convert.ToBase64String(bytes);
+        }
         return file;
     }
 

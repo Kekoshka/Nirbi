@@ -330,7 +330,7 @@ services:
   apigateway:
     build:
       context: .
-      dockerfile: ApiGateway/Dockerfile
+      dockerfile: GatewayService.WebApi/Dockerfile
     container_name: api_gateway
     environment:
       ASPNETCORE_ENVIRONMENT: Development

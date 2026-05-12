@@ -7,7 +7,6 @@ namespace GatewayService.WebApi.Controllers;
 
 [ApiController]
 [Route("api/tasks")]
-[Authorize]
 public class MinorTasksController : ControllerBase
 {
     private readonly IMinorTaskAggregator _aggregator;
