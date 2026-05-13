@@ -42,9 +42,9 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\Shared.Mapping\Shared.Mapping.csproj" />
     <ProjectReference Include="..\MinorTaskService.DataAccess.Postgres\MinorTaskService.DataAccess.Postgres.csproj" />
     <ProjectReference Include="..\Nirbi.ServiceAuth\Nirbi.ServiceAuth.csproj" />
+    <ProjectReference Include="..\Shared.Mapping\Shared.Mapping.csproj" />
   </ItemGroup>
 
 </Project>

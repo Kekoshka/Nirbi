@@ -48,8 +48,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\Shared.Mapping\Shared.Mapping.csproj" />
     <ProjectReference Include="..\ConfirmationService.DataAccess.Postgres\ConfirmationService.DataAccess.Postgres.csproj" />
+    <ProjectReference Include="..\Shared.Mapping\Shared.Mapping.csproj" />
   </ItemGroup>
 
 </Project>

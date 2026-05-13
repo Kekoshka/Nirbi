@@ -1,7 +1,6 @@
 ﻿using ConfirmationService.WebApi.DomainEvents.Events;
 using ConfirmationService.DataAccess.Postgres.DomainEvents;
 using Shared.Mapping;
-
 namespace ConfirmationService.Mapping;
 
 public static class ConfirmationEventMapperExtensions
