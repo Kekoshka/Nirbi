@@ -1,11 +1,7 @@
 using GatewayService.WebApi.Services;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.AspNetCore.Authorization;
-using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
-using System.Security.Claims;
-using System.Text;
 using Yarp.ReverseProxy.Transforms;
+using Nirbi.ServiceAuth.Extensions;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -34,40 +30,14 @@ builder.Services.AddCors(options =>
 
 // Swagger
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen(options =>
+builder.Services.AddSwaggerGen();
+
+//Auth
+builder.Services.AddNirbiServiceAuth(builder.Configuration);
+builder.Services.AddAuthorization(options =>
 {
-    options.SwaggerDoc("v1", new OpenApiInfo
-    {
-        Title = "Nirbi API Gateway",
-        Version = "v1",
-        Description = "Единая точка входа для микросервисов платформы Nirbi"
-    });
-
-    // Поддержка Bearer токена в Swagger UI
-    options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
-    {
-        Name = "Authorization",
-        Type = SecuritySchemeType.Http,
-        Scheme = "bearer",
-        BearerFormat = "JWT",
-        In = ParameterLocation.Header,
-        Description = "Введите JWT токен. Пример: eyJhbGci..."
-    });
-
-    options.AddSecurityRequirement(new OpenApiSecurityRequirement
-    {
-        {
-            new OpenApiSecurityScheme
-            {
-                Reference = new OpenApiReference
-                {
-                    Type = ReferenceType.SecurityScheme,
-                    Id = "Bearer"
-                }
-            },
-            []
-        }
-    });
+    options.AddPolicy("authenticated", policy =>
+        policy.RequireAuthenticatedUser());
 });
 
 // YARP
@@ -75,14 +45,6 @@ builder.Services.AddReverseProxy()
     .LoadFromConfig(builder.Configuration.GetSection("ReverseProxy"))
     .AddTransforms(context =>
     {
-        context.AddRequestTransform(async transformContext =>
-        {
-            var authHeader = transformContext.HttpContext.Request.Headers.Authorization;
-            if (!string.IsNullOrEmpty(authHeader))
-                transformContext.ProxyRequest.Headers
-                    .TryAddWithoutValidation("Authorization", (string?)authHeader);
-            await Task.CompletedTask;
-        });
     });
 
 builder.Services.AddControllers();

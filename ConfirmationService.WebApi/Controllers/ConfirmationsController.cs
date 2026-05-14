@@ -1,12 +1,14 @@
 using ConfirmationService.WebApi.Common.DTO;
 using ConfirmationService.WebApi.Common.DTO.ServiceDTO;
 using ConfirmationService.WebApi.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace ConfirmationService.WebApi.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
+[Authorize]
 public class ConfirmationsController : ControllerBase
 {
     private readonly IConfirmationService _confirmationService;

@@ -14,8 +14,6 @@ public static class KafkaConsumersRegistration
         this IServiceCollection services,
         ExternalServicesOptions options)
     {
-        // ── ConfirmationService ────────────────────────────────────────────
-
         services.AddHostedService(sp => new GenericConsumer<ConfirmationCreated>(
             topic: options.ConfirmationServiceTopic,
             hubMethod: "ShowConfirmationCreated",

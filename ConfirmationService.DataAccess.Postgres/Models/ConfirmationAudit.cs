@@ -10,7 +10,7 @@ public class ConfirmationAudit
 
     public string NewStatus { get; set; }
 
-    public DateTime ChangedAt { get; } = DateTime.UtcNow;
+    public DateTime ChangedAt { get; set; } = DateTime.UtcNow;
 
     /// <summary>
     /// ID пользователя, который совершил действие

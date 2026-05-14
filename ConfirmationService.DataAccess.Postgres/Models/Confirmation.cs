@@ -61,7 +61,7 @@ public class Confirmation : IHasDomainEvents
     /// <summary>
     /// Причина отклонения
     /// </summary>
-    public string RejectionReason { get; set; }
+    public string? RejectionReason { get; set; }
 
     /// <summary>
     /// История изменений
@@ -99,28 +99,12 @@ public class Confirmation : IHasDomainEvents
         {
             Status = ConfirmationStatus.Accepted.ToString();
             RespondedAt = DateTime.UtcNow;
-
-            ConfirmationAudit confirmationAudit = new(
-                Id,
-                initiatorId,
-                ConfirmationStatus.Accepted.ToString(),
-                oldStatus);
-
-            Audits.Add(confirmationAudit);
         }
         else
         {
             Status = ConfirmationStatus.Rejected.ToString();
             RejectionReason = rejectionReason;
             RespondedAt = DateTime.UtcNow;
-
-            ConfirmationAudit confirmationAudit = new(
-                Id,
-                initiatorId,
-                ConfirmationStatus.Rejected.ToString(),
-                oldStatus);
-
-            Audits.Add(confirmationAudit);
         }
 
         _domainEvents.Add(new ConfirmationRespondEvent(Id, InitiatorId, ReviewerId,EntityId, isAccepted));

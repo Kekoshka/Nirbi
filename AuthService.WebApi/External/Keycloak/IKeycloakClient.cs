@@ -72,5 +72,15 @@ namespace AuthService.WebApi.External.Keycloak
             string realm,
             [Body(BodySerializationMethod.UrlEncoded)] Dictionary<string, string> parameters,
             CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// Поиск пользователей по username
+        /// </summary>
+        [Get("/admin/realms/{realm}/users")]
+        Task<IEnumerable<KeycloakUserDto>> SearchUsersByUsernameAsync(
+            string realm,
+            [Header("Authorization")] string authHeader,
+            [Query] string username,
+            CancellationToken cancellationToken = default);
     }
 }

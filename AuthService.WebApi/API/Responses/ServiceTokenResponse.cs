@@ -37,4 +37,15 @@
         public string TokenType { get; set; } = "Bearer";
         public int ExpiresIn { get; set; }
     }
+    public record AuthResponseDto(
+    Guid UserId,
+    string AccessToken,
+    string RefreshToken,
+    string TokenType,
+    int ExpiresIn);
+
+    public record UserSearchResultDto(
+        Guid UserId,
+        string Username);
+
 }

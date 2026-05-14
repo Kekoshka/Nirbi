@@ -7,6 +7,7 @@ public class ConfirmationDbContext : DbContext
 {
     public ConfirmationDbContext(DbContextOptions<ConfirmationDbContext> options) : base(options)
     {
+        Database.EnsureCreated();
     }
 
     public DbSet<Confirmation> Confirmations { get; set; }

@@ -41,7 +41,6 @@
     <Folder Include="Common\Behaviors\" />
     <Folder Include="Common\DTO\Request\" />
     <Folder Include="Common\DTO\Response\" />
-    <Folder Include="Common\Extensions\" />
     <Folder Include="Common\Validators\" />
     <Folder Include="Controllers\" />
     <Folder Include="Mediator\" />
@@ -49,6 +48,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\ConfirmationService.DataAccess.Postgres\ConfirmationService.DataAccess.Postgres.csproj" />
+    <ProjectReference Include="..\Nirbi.ServiceAuth\Nirbi.ServiceAuth.csproj" />
     <ProjectReference Include="..\Shared.Mapping\Shared.Mapping.csproj" />
   </ItemGroup>
 

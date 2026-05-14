@@ -118,10 +118,19 @@ public class ConfirmationService : IConfirmationService
         if (DateTime.UtcNow > confirmation.ExpiresAt)
             throw new BadRequestException("Confirmation has expired");
 
+
+        var oldStatus = confirmation.Status;
         confirmation.Respond(dto.IsAccepted,
             _currentUserService.GetUserId(),
             dto.RejectionReason);
-        
+        var audit = new ConfirmationAudit(
+            confirmationId: confirmation.Id,
+            changedBy: _currentUserService.GetUserId(),
+            newStatus: confirmation.Status,
+            oldStatus: oldStatus);
+
+        await _context.ConfirmationAudits.AddAsync(audit);
+
         await _context.SaveChangesAsync();
     }
 
