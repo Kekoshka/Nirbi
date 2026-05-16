@@ -1,26 +1,25 @@
+FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS base
+USER $APP_UID
+
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
+ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
 
 COPY ["NotificationService.WebApi/NotificationService.WebApi.csproj", "NotificationService.WebApi/"]
 COPY ["packages/", "/src/packages/"]
-
-RUN dotnet restore "NotificationService.WebApi/NotificationService.WebApi.csproj" \
+RUN dotnet restore "./NotificationService.WebApi/NotificationService.WebApi.csproj" \
     --source /src/packages \
     --source https://api.nuget.org/v3/index.json
-
 COPY . .
 
 WORKDIR "/src/NotificationService.WebApi"
-RUN dotnet publish "NotificationService.WebApi.csproj" -c Release -o /out /p:UseAppHost=false
+RUN dotnet build "./NotificationService.WebApi.csproj" -c $BUILD_CONFIGURATION -o /app/build
 
-FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS runtime
+FROM build AS publish
+ARG BUILD_CONFIGURATION=Release
+RUN dotnet publish "./NotificationService.WebApi.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=false
+
+FROM base AS final
 WORKDIR /app
-
-RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
-
-COPY --from=build /out .
-
-EXPOSE 8080
-EXPOSE 8081
-
+COPY --from=publish /app/publish .
 ENTRYPOINT ["dotnet", "NotificationService.WebApi.dll"]

@@ -1,26 +1,30 @@
-FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
-WORKDIR /src
+# См. статью по ссылке https://aka.ms/customizecontainer, чтобы узнать как настроить контейнер отладки и как Visual Studio использует этот Dockerfile для создания образов для ускорения отладки.
 
-COPY ["UserService.WebApi/UserService.WebApi.csproj", "UserService.WebApi/"]
-COPY ["packages/", "/src/packages/"]
-
-RUN dotnet restore "UserService.WebApi/UserService.WebApi.csproj" \
-    --source /src/packages \
-    --source https://api.nuget.org/v3/index.json
-
-COPY . .
-
-WORKDIR "/src/UserService.WebApi"
-RUN dotnet publish "UserService.WebApi.csproj" -c Release -o /out /p:UseAppHost=false
-
-FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS runtime
+# Этот этап используется при запуске из VS в быстром режиме (по умолчанию для конфигурации отладки)
+FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS base
+USER $APP_UID
 WORKDIR /app
-
-RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
-
-COPY --from=build /out .
-
 EXPOSE 8080
 EXPOSE 8081
 
+
+# Этот этап используется для сборки проекта службы
+FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
+ARG BUILD_CONFIGURATION=Release
+WORKDIR /src
+COPY ["UserService.WebApi/UserService.WebApi.csproj", "UserService.WebApi/"]
+RUN dotnet restore "./UserService.WebApi/UserService.WebApi.csproj"
+COPY . .
+WORKDIR "/src/UserService.WebApi"
+RUN dotnet build "./UserService.WebApi.csproj" -c $BUILD_CONFIGURATION -o /app/build
+
+# Этот этап используется для публикации проекта службы, который будет скопирован на последний этап
+FROM build AS publish
+ARG BUILD_CONFIGURATION=Release
+RUN dotnet publish "./UserService.WebApi.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=false
+
+# Этот этап используется в рабочей среде или при запуске из VS в обычном режиме (по умолчанию, когда конфигурация отладки не используется)
+FROM base AS final
+WORKDIR /app
+COPY --from=publish /app/publish .
 ENTRYPOINT ["dotnet", "UserService.WebApi.dll"]
