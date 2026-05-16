@@ -1,30 +1,26 @@
-FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS base
-USER $APP_UID
-WORKDIR /app
-EXPOSE 8080
-EXPOSE 8081
-
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
-ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
 
+COPY ["GatewayService.WebApi/GatewayService.WebApi.csproj", "GatewayService.WebApi/"]
 COPY ["packages/", "/src/packages/"]
 
 RUN dotnet restore "GatewayService.WebApi/GatewayService.WebApi.csproj" \
     --source /src/packages \
     --source https://api.nuget.org/v3/index.json
 
-COPY ["GatewayService.WebApi/GatewayService.WebApi.csproj", "GatewayService.WebApi/"]
-RUN dotnet restore "./GatewayService.WebApi/GatewayService.WebApi.csproj"
 COPY . .
+
 WORKDIR "/src/GatewayService.WebApi"
-RUN dotnet build "./GatewayService.WebApi.csproj" -c $BUILD_CONFIGURATION -o /app/build
+RUN dotnet publish "GatewayService.WebApi.csproj" -c Release -o /out /p:UseAppHost=false
 
-FROM build AS publish
-ARG BUILD_CONFIGURATION=Release
-RUN dotnet publish "./GatewayService.WebApi.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=false
-
-FROM base AS final
+FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS runtime
 WORKDIR /app
-COPY --from=publish /app/publish .
+
+RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
+
+COPY --from=build /out .
+
+EXPOSE 8080
+EXPOSE 8081
+
 ENTRYPOINT ["dotnet", "GatewayService.WebApi.dll"]
