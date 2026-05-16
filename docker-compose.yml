@@ -25,7 +25,7 @@ services:
     container_name: kafka
     ports:
       - "9092:9092"
-      - "29092:29092"
+      - "29092:29092" 
     environment:
       KAFKA_PROCESS_ROLES: broker,controller
       KAFKA_NODE_ID: 1
@@ -48,7 +48,7 @@ services:
   minio:
     image: minio/minio:latest
     container_name: nirbi_minio
-    command: server /data --address ":9002" --console-address ":9001"
+    command: server /data --address ":9002" --console-address ":9001" 
     environment:
       MINIO_ROOT_USER: minioadmin
       MINIO_ROOT_PASSWORD: minioadmin
@@ -122,7 +122,7 @@ services:
       KC_HEALTH_ENABLED: true
     ports:
       - "8082:8080"
-      - "9000:9000"
+      - "9000:9000" 
     command: start-dev
     depends_on:
       postgres:
@@ -138,11 +138,11 @@ services:
       retries: 3
       start_period: 60s
     restart: unless-stopped
-
+    
   schema-registry:
     image: confluentinc/cp-schema-registry:latest
     depends_on:
-      - kafka
+     - kafka
     ports:
       - 8083:8081
     environment:
@@ -186,12 +186,6 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:5000/api/ServiceToken/health"]
-      interval: 10s
-      timeout: 5s
-      retries: 10
-      start_period: 60s
     networks:
       - auth_network
     restart: unless-stopped
@@ -227,8 +221,6 @@ services:
         condition: service_started
       schema-registry:
         condition: service_started
-      authservice.webapi:
-        condition: service_healthy
     networks:
       - auth_network
     restart: unless-stopped
@@ -258,8 +250,6 @@ services:
         condition: service_healthy
       minio:
         condition: service_started
-      authservice.webapi:
-        condition: service_healthy
     networks:
       - auth_network
     restart: unless-stopped
@@ -295,11 +285,9 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
-      authservice.webapi:
-        condition: service_healthy
     networks:
       - auth_network
-    restart: unless-stopped
+    restart: unless-stopped  
 
   confirmationservice.webapi:
     build:
@@ -337,8 +325,6 @@ services:
         condition: service_started
       schema-registry:
         condition: service_started
-      authservice.webapi:
-        condition: service_healthy
     networks:
       - auth_network
     restart: unless-stopped
@@ -367,7 +353,7 @@ services:
       - "8084:5000"
     depends_on:
       authservice.webapi:
-        condition: service_healthy
+        condition: service_started
       notificationservice.webapi:
         condition: service_started
       dataservice.webapi:
@@ -390,90 +376,6 @@ services:
     depends_on:
       apigateway:
         condition: service_started
-    networks:
-      - auth_network
-    restart: unless-stopped
-
-  userservice.webapi:
-    build:
-      context: .
-      dockerfile: UserService.WebApi/Dockerfile
-    container_name: user-service
-    environment:
-      ASPNETCORE_ENVIRONMENT: Development
-      ASPNETCORE_URLS: http://+:5000
-      ConnectionStrings__DefaultConnection: Server=postgres;Database=user_service;User Id=postgres;Password=postgres_password;Port=5432;
-      NirbiServiceAuth__AuthServiceBaseUrl: http://authservice.webapi:5000
-      NirbiServiceAuth__ClientId: user-service
-      NirbiServiceAuth__ClientSecret: 
-      NirbiServiceAuth__ServiceJwt__Issuer: myapp-auth
-      NirbiServiceAuth__ServiceJwt__Audience: myapp-services
-      NirbiServiceAuth__ServiceJwt__SigningKey: your_super_secret_key_min_32_chars_long_here_change_me_123456789
-      Logging__LogLevel__Default: Information
-      Logging__LogLevel__Microsoft: Warning
-    ports:
-      - "5005:5000"
-    depends_on:
-      postgres:
-        condition: service_healthy
-      authservice.webapi:
-        condition: service_healthy
-    networks:
-      - auth_network
-    restart: unless-stopped
-
-  majoreventservice.webapi:
-    build:
-      context: .
-      dockerfile: MajorEventService.WebApi/Dockerfile
-    container_name: major-event-service
-    environment:
-      ASPNETCORE_ENVIRONMENT: Development
-      ASPNETCORE_URLS: http://+:5000
-      ConnectionStrings__DefaultConnection: Server=postgres;Database=major_event_service;User Id=postgres;Password=postgres_password;Port=5432;
-      NirbiServiceAuth__AuthServiceBaseUrl: http://authservice.webapi:5000
-      NirbiServiceAuth__ClientId: major-event-service
-      NirbiServiceAuth__ClientSecret: 
-      NirbiServiceAuth__ServiceJwt__Issuer: myapp-auth
-      NirbiServiceAuth__ServiceJwt__Audience: myapp-services
-      NirbiServiceAuth__ServiceJwt__SigningKey: your_super_secret_key_min_32_chars_long_here_change_me_123456789
-      Logging__LogLevel__Default: Information
-      Logging__LogLevel__Microsoft: Warning
-    ports:
-      - "5006:5000"
-    depends_on:
-      postgres:
-        condition: service_healthy
-      authservice.webapi:
-        condition: service_healthy
-    networks:
-      - auth_network
-    restart: unless-stopped
-
-  communicationservice.webapi:
-    build:
-      context: .
-      dockerfile: CommunicationService.WebApi/Dockerfile
-    container_name: communication-service
-    environment:
-      ASPNETCORE_ENVIRONMENT: Development
-      ASPNETCORE_URLS: http://+:5000
-      ConnectionStrings__DefaultConnection: Server=postgres;Database=communication_service;User Id=postgres;Password=postgres_password;Port=5432;
-      NirbiServiceAuth__AuthServiceBaseUrl: http://authservice.webapi:5000
-      NirbiServiceAuth__ClientId: communication-service
-      NirbiServiceAuth__ClientSecret: 
-      NirbiServiceAuth__ServiceJwt__Issuer: myapp-auth
-      NirbiServiceAuth__ServiceJwt__Audience: myapp-services
-      NirbiServiceAuth__ServiceJwt__SigningKey: your_super_secret_key_min_32_chars_long_here_change_me_123456789
-      Logging__LogLevel__Default: Information
-      Logging__LogLevel__Microsoft: Warning
-    ports:
-      - "5007:5000"
-    depends_on:
-      postgres:
-        condition: service_healthy
-      authservice.webapi:
-        condition: service_healthy
     networks:
       - auth_network
     restart: unless-stopped
