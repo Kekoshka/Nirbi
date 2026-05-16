@@ -1,5 +1,3 @@
-using System.Text.Json;
-using System.Text.Json.Nodes;
 using AuthService.WebApi.API.Requests;
 using AuthService.WebApi.Configuration;
 using AuthService.WebApi.Domain.Services;
@@ -31,13 +29,8 @@ namespace AuthService.WebApi.Hosting
 
             using var scope = _scopeFactory.CreateScope();
             var tokenService = scope.ServiceProvider.GetRequiredService<IServiceTokenService>();
-            var env = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Production";
-            var fileName = env == "Production" ? "appsettings.json" : $"appsettings.{env}.json";
-            var jsonPath = Path.Combine(Directory.GetCurrentDirectory(), "appsettings.json");
-            var json = File.ReadAllText(jsonPath);
-            var node = JsonNode.Parse(json)!;
-            var servicesArray = node["ServiceRegistry"]!["Services"]!.AsArray();
-            foreach (var (entry, index) in opts.Services.Select((s, i) => (s, i)))
+
+            foreach (var entry in opts.Services)
             {
                 if (string.IsNullOrWhiteSpace(entry.ServiceId) || string.IsNullOrWhiteSpace(entry.ServiceName))
                 {
@@ -71,11 +64,6 @@ namespace AuthService.WebApi.Hosting
                                 "ServiceRegistry: registered {ServiceId}. Save this client secret: {ClientSecret}",
                                 created.ServiceId,
                                 created.ClientSecret);
-                            var serviceNode = servicesArray[index];
-                            if (serviceNode != null)
-                            {
-                                serviceNode["ClientSecret"] = created.ClientSecret;
-                            }
                         }
                         else
                         {
@@ -105,9 +93,6 @@ namespace AuthService.WebApi.Hosting
                         entry.ServiceId);
                 }
             }
-            await File.WriteAllTextAsync(jsonPath, 
-                node.ToJsonString(new JsonSerializerOptions { WriteIndented = true }),
-                cancellationToken).ConfigureAwait(false);
         }
 
         public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;
