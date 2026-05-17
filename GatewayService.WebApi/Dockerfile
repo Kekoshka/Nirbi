@@ -2,11 +2,7 @@ FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 WORKDIR /src
 
 COPY ["GatewayService.WebApi/GatewayService.WebApi.csproj", "GatewayService.WebApi/"]
-COPY ["packages/", "/src/packages/"]
-
-RUN dotnet restore "GatewayService.WebApi/GatewayService.WebApi.csproj" \
-    --source /src/packages \
-    --source https://api.nuget.org/v3/index.json
+RUN dotnet restore "GatewayService.WebApi/GatewayService.WebApi.csproj"
 
 COPY . .
 
