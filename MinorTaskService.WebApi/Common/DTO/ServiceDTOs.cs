@@ -19,6 +19,7 @@
         decimal Encouragement);
 
     public record class GetMinorTaskDTO(
+        Guid Id,
         string Name,
         string Description,
         decimal Latitude,
@@ -36,7 +37,10 @@
         string Description,
         decimal Latitude,
         decimal Longitude,
+        int NumberVolunteers,   
         decimal Encouragement,
+        string Status,          
+        Guid ConsumerId,        
         DateTime CreatedAt,
         Guid FileCollectionId);
 

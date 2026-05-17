@@ -12,6 +12,12 @@ public interface IMinorTaskAggregator
     Task<MinorTaskDetailResponse?> GetTaskWithImagesAsync(Guid minorTaskId, string? authHeader);
     Task<List<MinorTaskListItemResponse>> GetTasksWithPreviewAsync(int? limit, int? from, int? to, string? authHeader);
     Task<MinorTaskDetailResponse?> CreateTaskWithFilesAsync(CreateMinorTaskGatewayRequest request, string? authHeader);
+
+    // Возвращают HTTP статус для проброса в контроллер
+    Task<System.Net.HttpStatusCode> UpdateTaskAsync(Guid minorTaskId, UpdateMinorTaskGatewayRequest request, string? authHeader);
+    Task<System.Net.HttpStatusCode> UpdateTaskStatusAsync(Guid minorTaskId, Guid statusId, string? authHeader);
+    Task<System.Net.HttpStatusCode> DeleteTaskAsync(Guid minorTaskId, string? authHeader);
+    Task<System.Net.HttpStatusCode> DeleteTaskParticipantAsync(Guid minorTaskId, Guid participantId, string? authHeader);
 }
 
 public class MinorTaskAggregator : IMinorTaskAggregator
@@ -43,6 +49,9 @@ public class MinorTaskAggregator : IMinorTaskAggregator
         var task = await DeserializeAsync<MinorTaskResponse>(taskResponse);
         if (task is null) return null;
 
+        // Внутренний GetMinorTaskResponse не возвращает Id — подставляем из path
+        if (task.Id == Guid.Empty) task.Id = minorTaskId;
+
         var detail = MapToDetail(task);
 
         if (task.FileCollectionId.HasValue)
@@ -71,7 +80,6 @@ public class MinorTaskAggregator : IMinorTaskAggregator
         var tasksResponse = await taskClient.GetAsync($"/api/tasks{query}");
         if (!tasksResponse.IsSuccessStatusCode)
             throw new ForbiddenException();
-        if (!tasksResponse.IsSuccessStatusCode) return [];
 
         var tasks = await DeserializeAsync<List<MinorTaskResponse>>(tasksResponse) ?? [];
 
@@ -86,7 +94,9 @@ public class MinorTaskAggregator : IMinorTaskAggregator
                 Latitude = task.Latitude,
                 Longitude = task.Longitude,
                 NumberVolunteers = task.NumberVolunteers,
-                Encouragement = task.Encouragement
+                Encouragement = task.Encouragement,
+                Status = task.Status,
+                ConsumerId = task.ConsumerId
             };
 
             if (task.FileCollectionId.HasValue)
@@ -100,14 +110,13 @@ public class MinorTaskAggregator : IMinorTaskAggregator
                     {
                         // Скачиваем байты только первого файла
                         var fileResponse = await dataClient.GetAsync($"/api/files/{first.Id}");
-                        if (!fileResponse.IsSuccessStatusCode)
-                            throw new ForbiddenException();
                         if (fileResponse.IsSuccessStatusCode)
                         {
                             var bytes = await fileResponse.Content.ReadAsByteArrayAsync();
                             item.PreviewImageData = Convert.ToBase64String(bytes);
                             item.PreviewImageContentType = first.ContentType;
                         }
+                        // Не падаем, если превью недоступно — карточка просто без картинки
                     }
                 }
             }
@@ -163,11 +172,60 @@ public class MinorTaskAggregator : IMinorTaskAggregator
         var createResponse = await taskClient.PostAsync("/api/tasks", content);
         createResponse.EnsureSuccessStatusCode();
 
-        var created = await DeserializeAsync<MinorTaskResponse>(createResponse);
-        if (created is null) return null;
+        var createdId = await DeserializeAsync<Guid>(createResponse);
 
         // 4. Возвращаем задачу с полным списком изображений
-        return await GetTaskWithImagesAsync(created.Id, authHeader);
+        return await GetTaskWithImagesAsync(createdId, authHeader);
+    }
+
+    // ─── PATCH /api/tasks/{id} — обновление полей задачи ────────────────────
+
+    public async Task<System.Net.HttpStatusCode> UpdateTaskAsync(
+        Guid minorTaskId, UpdateMinorTaskGatewayRequest request, string? authHeader)
+    {
+        var taskClient = CreateClient("MinorTaskService", authHeader);
+        var json = JsonSerializer.Serialize(request, _jsonOptions);
+        using var content = new StringContent(json, Encoding.UTF8, "application/json");
+
+        using var httpReq = new HttpRequestMessage(HttpMethod.Patch, $"/api/tasks/{minorTaskId}")
+        {
+            Content = content
+        };
+        using var response = await taskClient.SendAsync(httpReq);
+        return response.StatusCode;
+    }
+
+    // ─── PUT /api/tasks/{id} — обновление статуса ───────────────────────────
+
+    public async Task<System.Net.HttpStatusCode> UpdateTaskStatusAsync(
+        Guid minorTaskId, Guid statusId, string? authHeader)
+    {
+        var taskClient = CreateClient("MinorTaskService", authHeader);
+        var json = JsonSerializer.Serialize(new { StatusId = statusId }, _jsonOptions);
+        using var content = new StringContent(json, Encoding.UTF8, "application/json");
+
+        using var response = await taskClient.PutAsync($"/api/tasks/{minorTaskId}", content);
+        return response.StatusCode;
+    }
+
+    // ─── DELETE /api/tasks/{id} ──────────────────────────────────────────────
+
+    public async Task<System.Net.HttpStatusCode> DeleteTaskAsync(Guid minorTaskId, string? authHeader)
+    {
+        var taskClient = CreateClient("MinorTaskService", authHeader);
+        using var response = await taskClient.DeleteAsync($"/api/tasks/{minorTaskId}");
+        return response.StatusCode;
+    }
+
+    // ─── DELETE /api/tasks/{id}/participants/{participantId} ────────────────
+
+    public async Task<System.Net.HttpStatusCode> DeleteTaskParticipantAsync(
+        Guid minorTaskId, Guid participantId, string? authHeader)
+    {
+        var taskClient = CreateClient("MinorTaskService", authHeader);
+        using var response = await taskClient.DeleteAsync(
+            $"/api/tasks/{minorTaskId}/participants/{participantId}");
+        return response.StatusCode;
     }
 
     // ─── Helpers ─────────────────────────────────────────────────────────────
@@ -194,7 +252,9 @@ public class MinorTaskAggregator : IMinorTaskAggregator
         Latitude = task.Latitude,
         Longitude = task.Longitude,
         NumberVolunteers = task.NumberVolunteers,
-        Encouragement = task.Encouragement
+        Encouragement = task.Encouragement,
+        Status = task.Status,
+        ConsumerId = task.ConsumerId
     };
 
     private async Task<FileMetadataDto> EnrichWithFileDataAsync(FileMetadataDto file, HttpClient dataClient)
@@ -206,13 +266,6 @@ public class MinorTaskAggregator : IMinorTaskAggregator
             file.Data = Convert.ToBase64String(bytes);
         }
         return file;
-    }
-
-    private string BuildFileDownloadUrl(Guid fileId)
-    {
-        // Gateway предоставляет публичный URL для скачивания файлов
-        var gatewayBase = _configuration["GatewayBaseUrl"] ?? string.Empty;
-        return $"{gatewayBase}/api/files/{fileId}";
     }
 
     private static string BuildQueryString(int? limit, int? from, int? to)

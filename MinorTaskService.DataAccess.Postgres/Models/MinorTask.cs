@@ -28,6 +28,7 @@ namespace MinorTaskService.DataAccess.Postgres.Models
         public Status Status { get; set; } = null!;
         public ICollection<TaskParticipant> EventParticipants { get; set; } = new List<TaskParticipant>();
 
+        public MinorTask() { }
         public MinorTask(
             string name,
             string description,

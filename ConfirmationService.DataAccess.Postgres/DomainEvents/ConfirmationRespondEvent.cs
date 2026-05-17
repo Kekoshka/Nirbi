@@ -1,6 +1,6 @@
 using ConfirmationService.DataAccess.Postgres.DomainEvents.Interfaces;
 
-namespace ConfirmationService.WebApi.DomainEvents.Events
+namespace ConfirmationService.DataAccess.Postgres.DomainEvents
 {
     public record class ConfirmationRespondEvent(
         Guid ConfirmationId,

@@ -585,3 +585,334 @@
   .cards-grid { grid-template-columns: 1fr; }
   #tasks-map { height: 220px; }
 }
+
+/* ── Image upload ────────────────────────────────────────────────────────── */
+.file-upload-label {
+  display: flex;
+  align-items: center;
+  gap: .75rem;
+  padding: .85rem 1.1rem;
+  border: 1.5px dashed var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--text-sec);
+  font-size: .875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: border-color var(--transition), background var(--transition), color var(--transition);
+}
+.file-upload-label:hover {
+  border-color: var(--primary);
+  background: var(--primary-light);
+  color: var(--primary);
+}
+.file-upload-label svg {
+  width: 20px; height: 20px;
+  flex-shrink: 0;
+}
+
+.images-preview {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .5rem;
+  margin-top: .5rem;
+}
+.preview-img {
+  width: 72px;
+  height: 72px;
+  object-fit: cover;
+  border-radius: var(--radius-sm);
+  border: 1.5px solid var(--border);
+}
+
+/* ── Notifications bell + panel ──────────────────────────────────────────── */
+.notif-wrap {
+  position: relative;
+}
+.btn-notif {
+  position: relative;
+  width: 42px;
+  height: 42px;
+  display: grid;
+  place-items: center;
+  border-radius: var(--radius-sm);
+  background: var(--bg);
+  border: 1.5px solid var(--border);
+  color: var(--text-sec);
+  cursor: pointer;
+  transition: all var(--transition);
+}
+.btn-notif:hover {
+  color: var(--primary);
+  border-color: var(--primary);
+}
+.btn-notif svg { width: 20px; height: 20px; }
+
+.notif-badge {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  background: var(--error);
+  color: #fff;
+  font-size: .68rem;
+  font-weight: 800;
+  border-radius: 9px;
+  display: grid;
+  place-items: center;
+  border: 2px solid var(--bg);
+  letter-spacing: -.02em;
+}
+
+.notif-panel {
+  position: absolute;
+  top: calc(100% + .5rem);
+  right: 0;
+  width: 380px;
+  max-height: 480px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-lg);
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: notifIn .18s ease;
+}
+@keyframes notifIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.notif-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: .85rem 1rem;
+  border-bottom: 1px solid var(--border);
+}
+.notif-panel-header h3 {
+  font-size: .95rem;
+  font-weight: 700;
+  margin: 0;
+}
+.notif-mark-read {
+  background: none;
+  border: none;
+  color: var(--primary);
+  font-size: .8rem;
+  font-weight: 600;
+  cursor: pointer;
+  padding: .25rem .5rem;
+  border-radius: 6px;
+}
+.notif-mark-read:hover { background: var(--primary-light); }
+
+.notif-list {
+  overflow-y: auto;
+  flex: 1;
+}
+.notif-empty {
+  padding: 2rem 1rem;
+  text-align: center;
+  color: var(--text-sec);
+  font-size: .875rem;
+}
+
+.notif-item {
+  padding: .85rem 1rem;
+  border-bottom: 1px solid var(--border);
+  transition: background var(--transition);
+}
+.notif-item:last-child { border-bottom: none; }
+.notif-item:hover { background: var(--surface); }
+.notif-item-dismissed { opacity: .55; }
+
+.notif-item-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: .5rem;
+  margin-bottom: .25rem;
+}
+.notif-item-title {
+  font-size: .875rem;
+  font-weight: 700;
+  color: var(--text);
+}
+.notif-item-date {
+  font-size: .72rem;
+  color: var(--text-sec);
+  flex-shrink: 0;
+}
+.notif-item-body {
+  font-size: .82rem;
+  color: var(--text-sec);
+  line-height: 1.45;
+}
+.notif-item-actions {
+  display: flex;
+  gap: .5rem;
+  margin-top: .65rem;
+}
+.notif-btn {
+  flex: 1;
+  height: 32px;
+  border-radius: 6px;
+  font-size: .8rem;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1.5px solid transparent;
+  transition: all var(--transition);
+}
+.notif-btn:disabled { opacity: .5; cursor: not-allowed; }
+.notif-btn-accept {
+  background: var(--success);
+  color: #fff;
+}
+.notif-btn-accept:hover:not(:disabled) { filter: brightness(0.92); }
+.notif-btn-reject {
+  background: var(--bg);
+  color: var(--text-sec);
+  border-color: var(--border);
+}
+.notif-btn-reject:hover:not(:disabled) {
+  color: var(--error);
+  border-color: var(--error);
+}
+
+/* ── Owner badge variants ────────────────────────────────────────────────── */
+.card-owner-badge.owner-self {
+  background: var(--primary-light);
+  color: var(--primary);
+}
+.card-owner-badge.owner-other {
+  background: var(--surface);
+  color: var(--text-sec);
+}
+
+/* Responsive: panel takes more screen on mobile */
+@media (max-width: 540px) {
+  .notif-panel {
+    width: calc(100vw - 2rem);
+    right: -.5rem;
+  }
+}
+
+/* ── Card preview thumbnail (PreviewImageData base64) ────────────────────── */
+.card-preview {
+  margin: -1rem -1rem .75rem -1rem;
+  height: 140px;
+  overflow: hidden;
+  border-radius: var(--radius) var(--radius) 0 0;
+  background: var(--surface);
+}
+.card-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+/* ── Detail modal image gallery ──────────────────────────────────────────── */
+.detail-gallery {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: .5rem;
+  margin: 1rem 0;
+}
+.detail-gallery img {
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: cover;
+  border-radius: var(--radius-sm);
+  border: 1.5px solid var(--border);
+  cursor: zoom-in;
+  transition: transform var(--transition);
+}
+.detail-gallery img:hover {
+  transform: scale(1.02);
+}
+
+/* ── Toast: action buttons ───────────────────────────────────────────────── */
+.toast.toast-actionable {
+  min-width: 320px;
+  max-width: 380px;
+}
+.toast-actions {
+  display: flex;
+  gap: .5rem;
+  margin-top: .65rem;
+}
+.toast-action-btn {
+  flex: 1;
+  height: 32px;
+  border-radius: 6px;
+  font-size: .82rem;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1.5px solid transparent;
+  transition: all var(--transition);
+}
+.toast-action-btn:disabled { opacity: .55; cursor: not-allowed; }
+.toast-action-success {
+  background: var(--success);
+  color: #fff;
+}
+.toast-action-success:hover:not(:disabled) { filter: brightness(.92); }
+.toast-action-danger {
+  background: var(--bg);
+  color: var(--error);
+  border-color: var(--error);
+}
+.toast-action-danger:hover:not(:disabled) {
+  background: var(--error-light);
+}
+.toast-action-primary {
+  background: var(--primary);
+  color: #fff;
+}
+.toast-action-primary:hover:not(:disabled) { background: var(--primary-hover); }
+.toast-action-ghost {
+  background: var(--bg);
+  color: var(--text-sec);
+  border-color: var(--border);
+}
+.toast-action-ghost:hover:not(:disabled) {
+  color: var(--text);
+  border-color: var(--text-sec);
+}
+
+/* ── Detail apply info banners ───────────────────────────────────────────── */
+.detail-apply-info {
+  display: flex;
+  align-items: center;
+  gap: .65rem;
+  padding: .8rem 1rem;
+  border-radius: var(--radius-sm);
+  font-size: .875rem;
+  font-weight: 500;
+  flex: 1;
+}
+.detail-apply-info svg {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+}
+.detail-apply-pending {
+  background: var(--primary-light);
+  color: var(--primary);
+}
+.detail-apply-accepted {
+  background: var(--success-light);
+  color: var(--success);
+}
+.detail-apply-rejected {
+  background: var(--error-light);
+  color: var(--error);
+  font-size: .82rem;
+  padding: .6rem .85rem;
+}

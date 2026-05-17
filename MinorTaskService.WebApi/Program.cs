@@ -33,7 +33,7 @@ builder.Services.AddSingleton<IKafkaService, KafkaService>();
 builder.Services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(Assembly.GetExecutingAssembly()));
 
 var app = builder.Build();
-//app.UseExceptionHandling();
+app.UseExceptionHandling();
 
 if (app.Environment.IsDevelopment())
 {

@@ -26,7 +26,7 @@ async function refreshTokens() {
   return data.accessToken;
 }
 
-async function request(path, options = {}, retry = true) {
+async function request(path, options = {}, retry = true, isForm = false) {
   // Ensure valid access token before request
   if (!tokenStore.isAccessValid() && tokenStore.hasSession()) {
     if (!refreshPromise) {
@@ -35,7 +35,10 @@ async function request(path, options = {}, retry = true) {
     await refreshPromise;
   }
 
-  const headers = { 'Content-Type': 'application/json', ...(options.headers || {}) };
+  // Для FormData не ставим Content-Type — браузер сам добавит boundary
+  const headers = isForm
+    ? { ...(options.headers || {}) }
+    : { 'Content-Type': 'application/json', ...(options.headers || {}) };
   const access = tokenStore.getAccess();
   if (access) headers['Authorization'] = `Bearer ${access}`;
 
@@ -73,7 +76,10 @@ export const api = {
   get:    (path, opts)        => request(path, { method: 'GET',    ...opts }),
   post:   (path, body, opts)  => request(path, { method: 'POST',   body: JSON.stringify(body), ...opts }),
   put:    (path, body, opts)  => request(path, { method: 'PUT',    body: JSON.stringify(body), ...opts }),
+  patch:  (path, body, opts)  => request(path, { method: 'PATCH',  body: JSON.stringify(body), ...opts }),
   delete: (path, opts)        => request(path, { method: 'DELETE', ...opts }),
+  // multipart/form-data — Content-Type выставляет браузер (с boundary)
+  postForm: (path, formData, opts) => request(path, { method: 'POST', body: formData, ...opts }, true, true),
 };
 
 // ── Auth calls — без токена, с явной обработкой ошибок ──────────────────────

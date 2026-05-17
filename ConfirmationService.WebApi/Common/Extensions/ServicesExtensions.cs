@@ -1,5 +1,8 @@
 ﻿using ConfirmationService.DataAccess.Context;
+using ConfirmationService.DataAccess.Postgres.DomainEvents;
+using ConfirmationService.DataAccess.Postgres.DomainEvents.Interfaces;
 using ConfirmationService.WebApi.Common.Options;
+using ConfirmationService.WebApi.DomainEvents;
 using Confluent.SchemaRegistry;
 using ExceptionHandler.Exceptions;
 using Microsoft.EntityFrameworkCore;
@@ -103,5 +106,14 @@ namespace ConfirmationService.WebApi.Common.Extensions
                     .ConfigureHttpClient(c => c.BaseAddress = new Uri(baseAddress));
             }
         }
+        public static IServiceCollection AddConfirmationDomainEvents(this IServiceCollection services)
+        {
+            services.AddScoped<IDomainEventDispatcher, DomainEventDispatcher>();
+            services.AddScoped<IDomainEventHandler<ConfirmationCreatedEvent>, ConfirmationCreatedEventHandler>();
+            services.AddScoped<IDomainEventHandler<ConfirmationRevokedEvent>, ConfirmationRevokedEventHandler>();
+            services.AddScoped<IDomainEventHandler<ConfirmationRespondEvent>, ConfirmationRespondEventHandler>();
+            return services;
+        }
+
     }
 }

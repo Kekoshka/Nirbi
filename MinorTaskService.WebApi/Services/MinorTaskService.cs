@@ -43,7 +43,7 @@ namespace MinorTaskService.WebApi.Services
 
         public async Task<GetMinorTaskDTO> GetMinorTaskByIdAsync(Guid minorTaskId)
         {
-            var minorTask = await _context.MinorTasks.FindAsync(minorTaskId);
+            var minorTask = await _context.MinorTasks.Include(mt => mt.Status).FirstOrDefaultAsync(mt => mt.Id == minorTaskId);
             if (minorTask is null)
                 throw new NotFoundException($"Minor task with id {minorTaskId} not found");
 
@@ -68,6 +68,7 @@ namespace MinorTaskService.WebApi.Services
         public async Task<List<GetMinorTasksDTO>> GetMinorTasksBetweenAsync(int from, int to, CancellationToken cancellationToken)
         {
             var minorTasks = await _context.MinorTasks
+                .Include(mt => mt.Status)
                 .Where(mt => mt.StatusId == StatusType.InSearch)
                 .OrderBy(mt => mt.Id)
                 .ToGetMinorTasksDTO()

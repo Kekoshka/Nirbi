@@ -27,7 +27,7 @@ public class MinorTasksController : ControllerBase
             request.Encouragement,
             request.Images);
         var id = await _mediator.Send(command, cancellationToken);
-        return CreatedAtAction(nameof(GetTask), new { minorTaskId = id }, id);
+        return Ok(id);
     }
 
     [HttpGet("tasks/{minorTaskId:guid}")]

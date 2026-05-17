@@ -19,6 +19,7 @@ public class ConfirmationAudit
 
     public Confirmation Confirmation { get; set; }
 
+    public ConfirmationAudit() { }
     public ConfirmationAudit(Guid confirmationId, Guid changedBy, string newStatus, string oldStatus = "")
     {
         Id = Guid.NewGuid();

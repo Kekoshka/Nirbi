@@ -1,7 +1,6 @@
 using ConfirmationService.DataAccess.Enums;
 using ConfirmationService.DataAccess.Postgres.DomainEvents;
 using ConfirmationService.DataAccess.Postgres.DomainEvents.Interfaces;
-using ConfirmationService.WebApi.DomainEvents.Events;
 
 namespace ConfirmationService.DataAccess.Models;
 
@@ -68,6 +67,7 @@ public class Confirmation : IHasDomainEvents
     /// </summary>
     public ICollection<ConfirmationAudit> Audits { get; set; } = new List<ConfirmationAudit>();
 
+    public Confirmation() { }
     public Confirmation(string confirmationType, Guid entityId, Guid initiatorId, Guid reviewerId, string metaData, DateTime expiresAt)
     {
         Id = Guid.NewGuid();

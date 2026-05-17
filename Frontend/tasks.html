@@ -55,6 +55,26 @@
           <button class="toggle-btn active" data-mode="all">Все задачи</button>
           <button class="toggle-btn" data-mode="my">Мои задачи</button>
         </div>
+
+        <!-- Notifications bell -->
+        <div class="notif-wrap">
+          <button class="btn-notif" id="btn-notifications" aria-label="Уведомления">
+            <svg viewBox="0 0 24 24" fill="none">
+              <path d="M6 8a6 6 0 1 1 12 0c0 3.5 1 5.5 2 6.5H4c1-1 2-3 2-6.5zM10 19a2 2 0 0 0 4 0" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <span class="notif-badge" id="notif-badge" hidden>0</span>
+          </button>
+          <div class="notif-panel" id="notif-panel" hidden>
+            <header class="notif-panel-header">
+              <h3>Уведомления</h3>
+              <button class="notif-mark-read" id="btn-notif-clear">Очистить</button>
+            </header>
+            <div class="notif-list" id="notif-list">
+              <div class="notif-empty">Нет уведомлений</div>
+            </div>
+          </div>
+        </div>
+
         <button class="btn-create" id="btn-create-task">
           <svg viewBox="0 0 20 20" fill="none"><path d="M10 4v12M4 10h12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
           Создать задачу
@@ -124,6 +144,8 @@
 
     <div class="detail-body">
       <div class="detail-description" id="detail-description"></div>
+
+      <div class="detail-gallery" id="detail-gallery" hidden></div>
 
       <div class="detail-stats">
         <div class="stat-card">
@@ -213,6 +235,22 @@
         <span class="field-error" id="tf-coords-error"></span>
       </div>
 
+      <div class="field-group" id="tf-existing-wrap" hidden>
+        <label class="field-label">Уже загруженные изображения</label>
+        <div id="tf-existing-images" class="images-preview"></div>
+        <span class="hint-text">Существующие изображения сохранятся. Здесь можно добавить новые.</span>
+      </div>
+
+      <div class="field-group">
+        <label class="field-label">Фотографии <span class="hint-text">— необязательно, до 5 файлов</span></label>
+        <label class="file-upload-label" for="tf-images">
+          <svg viewBox="0 0 24 24" fill="none"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <span id="file-upload-text">Нажмите для выбора изображений</span>
+        </label>
+        <input type="file" id="tf-images" accept="image/*" multiple style="display:none" />
+        <div id="tf-images-preview" class="images-preview"></div>
+      </div>
+
       <div class="form-actions">
         <button type="button" class="btn-secondary" id="btn-cancel-form">Отмена</button>
         <button type="submit" class="btn-primary" id="btn-submit-form" style="width:auto;padding:0 2rem;">
@@ -243,6 +281,7 @@
 </div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.7/signalr.min.js"></script>
 <script type="module" src="js/tasks.js"></script>
 </body>
 </html>

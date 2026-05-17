@@ -98,6 +98,19 @@ public static class ServiceCollectionExtensions
                     {
                         Console.WriteLine("JWT Token validated successfully");
                         return Task.CompletedTask;
+                    },
+                    OnMessageReceived = context =>
+                    {
+                        var accessToken = context.Request.Query["access_token"];
+                        var path = context.HttpContext.Request.Path;
+
+                        if (!string.IsNullOrEmpty(accessToken)
+                            && path.StartsWithSegments("/notificationHub"))
+                        {
+                            context.Token = accessToken;
+                        }
+
+                        return Task.CompletedTask;
                     }
                 };
             });
@@ -146,11 +159,17 @@ public static class ServiceCollectionExtensions
 
     private static string? GetBearerToken(HttpRequest request)
     {
+        // 1. Стандартный заголовок Authorization
         var header = request.Headers.Authorization.ToString();
-        if (string.IsNullOrEmpty(header) ||
-            !header.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
-            return null;
+        if (!string.IsNullOrEmpty(header)
+            && header.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
+            return header["Bearer ".Length..].Trim();
 
-        return header["Bearer ".Length..].Trim();
+        // 2. SignalR WebSocket/SSE — токен в query string
+        var queryToken = request.Query["access_token"].ToString();
+        if (!string.IsNullOrEmpty(queryToken))
+            return queryToken;
+
+        return null;
     }
 }

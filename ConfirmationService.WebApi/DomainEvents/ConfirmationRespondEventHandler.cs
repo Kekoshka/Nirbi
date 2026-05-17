@@ -1,7 +1,7 @@
-﻿using ConfirmationService.DataAccess.Postgres.DomainEvents.Interfaces;
+﻿using ConfirmationService.DataAccess.Postgres.DomainEvents;
+using ConfirmationService.DataAccess.Postgres.DomainEvents.Interfaces;
 using ConfirmationService.Mapping;
 using ConfirmationService.WebApi.Common.Options;
-using ConfirmationService.WebApi.DomainEvents.Events;
 using ConfirmationService.WebApi.Interfaces;
 using Microsoft.Extensions.Options;
 
