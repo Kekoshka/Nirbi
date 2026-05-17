@@ -7,7 +7,8 @@ public sealed record UploadStandaloneFileCommand(
     Stream Content,
     string ContentType,
     string? OriginalFileName,
-    long? KnownSizeBytes) : IRequest<Guid>;
+    long? KnownSizeBytes,
+    bool IsPublic) : IRequest<Guid>;
 
 public sealed class UploadStandaloneFileCommandHandler : IRequestHandler<UploadStandaloneFileCommand, Guid>
 {
@@ -21,5 +22,6 @@ public sealed class UploadStandaloneFileCommandHandler : IRequestHandler<UploadS
             request.ContentType,
             request.OriginalFileName,
             request.KnownSizeBytes,
+            request.IsPublic,
             cancellationToken);
 }

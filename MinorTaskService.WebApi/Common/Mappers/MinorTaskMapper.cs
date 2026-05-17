@@ -26,9 +26,18 @@ public static partial class MinorTaskMapper
 
     public static partial List<GetMinorTasksResponse> ToGetMinorTasksResponse(this List<GetMinorTasksDTO> value);
 
-    // ── Entity → DTO (IQueryable, для списка) ─────────────────────────────
-    [MapProperty("Status.Name", "Status")]
-    public static partial IQueryable<GetMinorTasksDTO> ToGetMinorTasksDTO(this IQueryable<MinorTask> value);
+    public static List<GetMinorTasksDTO> ToGetMinorTasksDTO(this List<MinorTask> value) =>
+        value.Select(mt => new GetMinorTasksDTO(mt.Id,
+            mt.Name,
+            mt.Description, 
+            mt.Latitude, 
+            mt.Longitude, 
+            mt.NumberVolunteers, 
+            mt.Encouragement, 
+            mt.Status.Name, 
+            mt.ConsumerId, 
+            mt.CreatedAt, 
+            mt.FileCollectionId)).ToList();
 
     private static string FormatConsumerId(Guid consumerId) => consumerId.ToString();
 

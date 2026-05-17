@@ -43,7 +43,9 @@ namespace MinorTaskService.WebApi.Services
 
         public async Task<GetMinorTaskDTO> GetMinorTaskByIdAsync(Guid minorTaskId)
         {
-            var minorTask = await _context.MinorTasks.Include(mt => mt.Status).FirstOrDefaultAsync(mt => mt.Id == minorTaskId);
+            var minorTask = await _context.MinorTasks
+                .Include(mt => mt.Status)
+                .FirstOrDefaultAsync(mt => mt.Id == minorTaskId);
             if (minorTask is null)
                 throw new NotFoundException($"Minor task with id {minorTaskId} not found");
 
@@ -53,16 +55,16 @@ namespace MinorTaskService.WebApi.Services
         public async Task<List<GetMinorTasksDTO>> GetMinorTasksFirstAsync(int limit, CancellationToken cancellationToken)
         {
             var minorTasks = await _context.MinorTasks
+                .Include(mt => mt.Status)
                 .Where(mt => mt.StatusId == StatusType.InSearch)
                 .OrderBy(mt => mt.Id)
-                .ToGetMinorTasksDTO()
                 .Take(limit)
-                .ToListAsync(cancellationToken);
+                .ToListAsync();
 
             if (minorTasks is null)
                 throw new NotFoundException("Minor tasks not found");
 
-            return minorTasks;
+            return minorTasks.ToGetMinorTasksDTO();
         }
 
         public async Task<List<GetMinorTasksDTO>> GetMinorTasksBetweenAsync(int from, int to, CancellationToken cancellationToken)
@@ -71,7 +73,6 @@ namespace MinorTaskService.WebApi.Services
                 .Include(mt => mt.Status)
                 .Where(mt => mt.StatusId == StatusType.InSearch)
                 .OrderBy(mt => mt.Id)
-                .ToGetMinorTasksDTO()
                 .Skip(from)
                 .Take(to)
                 .ToListAsync(cancellationToken);
@@ -79,7 +80,7 @@ namespace MinorTaskService.WebApi.Services
             if(minorTasks is null)
                 throw new NotFoundException($"Minor tasks from {from} to {to} not found");
 
-            return minorTasks;
+            return minorTasks.ToGetMinorTasksDTO();
         }
 
         public async Task UpdateMinorTaskAsync(UpdateMinorTaskDTO updateDto, CancellationToken cancellationToken)

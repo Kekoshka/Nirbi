@@ -150,7 +150,7 @@ public class MinorTaskAggregator : IMinorTaskAggregator
                 streamContent.Headers.ContentType = MediaTypeHeaderValue.Parse(image.ContentType);
                 form.Add(streamContent, "file", image.FileName);
 
-                var uploadResponse = await dataClient.PostAsync($"/api/collections/{collectionId}/files", form);
+                var uploadResponse = await dataClient.PostAsync($"/api/collections/{collectionId}/files?isPublic=true", form);
                 uploadResponse.EnsureSuccessStatusCode();
             }
         }

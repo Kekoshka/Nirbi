@@ -16,6 +16,7 @@ public interface IDataObjectService
         string contentType,
         string? originalFileName,
         long? knownSizeBytes,
+        bool isPublic = false,
         CancellationToken cancellationToken = default);
     Task<Guid> UploadToCollectionAsync(
         Guid collectionId,
@@ -23,11 +24,12 @@ public interface IDataObjectService
         string contentType,
         string? originalFileName,
         long? knownSizeBytes,
+        bool isPublic = false,
         CancellationToken cancellationToken = default);
     Task<FileMetadataDto?> GetMetadataAsync(
         Guid fileId,
         CancellationToken cancellationToken = default);
-    Task<IReadOnlyList<FileMetadataDto>> ListByCollectionAsync(
+    Task<List<FileMetadataDto>> ListByCollectionAsync(
         Guid collectionId,
         CancellationToken cancellationToken = default);
     Task<FileDownloadResult?> OpenReadAsync(

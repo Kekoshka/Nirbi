@@ -140,7 +140,8 @@ async function loadStatuses() {
     filterStatus.innerHTML = '<option value="">Все статусы</option>';
     statuses.forEach(s => {
       const opt = document.createElement('option');
-      opt.value = s.id;
+      // Фильтруем по имени статуса (t.status = строка), а не по UUID
+      opt.value = s.name;
       opt.textContent = s.name;
       filterStatus.appendChild(opt);
     });
@@ -175,9 +176,9 @@ function getFiltered() {
   const q = searchInput.value.trim().toLowerCase();
   if (q) tasks = tasks.filter(t => (t.name || '').toLowerCase().includes(q));
 
-  // status
+  // status — сравниваем строку t.status с именем статуса из select
   const sid = filterStatus.value;
-  if (sid) tasks = tasks.filter(t => String(t.statusId) === sid);
+  if (sid) tasks = tasks.filter(t => (t.status || '') === sid);
 
   // sort
   const sort = filterSort.value;

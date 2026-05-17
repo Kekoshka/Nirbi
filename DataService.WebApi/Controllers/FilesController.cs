@@ -17,14 +17,14 @@ public class FilesController : ControllerBase
 
     [HttpPost]
     [RequestSizeLimit(524_288_000)]
-    public async Task<ActionResult<Guid>> Upload(IFormFile file, CancellationToken cancellationToken)
+    public async Task<ActionResult<Guid>> Upload(bool isPublic, IFormFile file, CancellationToken cancellationToken)
     {
         if (file.Length == 0)
             return BadRequest("File is empty.");
 
         await using var stream = file.OpenReadStream();
         var id = await _mediator.Send(
-            new UploadStandaloneFileCommand(stream, file.ContentType, file.FileName, file.Length),
+            new UploadStandaloneFileCommand(stream, file.ContentType, file.FileName, file.Length, isPublic),
             cancellationToken);
         return CreatedAtAction(nameof(GetMetadata), new { id }, id);
     }
