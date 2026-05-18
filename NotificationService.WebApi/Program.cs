@@ -14,6 +14,7 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddSignalR();
 builder.Services.AddJWTAuthentication();
+builder.Services.AddHostedService<HostedBase>();
 builder.Services.AddNirbiServiceAuth(builder.Configuration);
 builder.Services.AddSchemaRegistryClient(builder.Configuration);
 builder.Services.RegisterExecutingAsseblyServices();

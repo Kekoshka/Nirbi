@@ -1,5 +1,7 @@
 using System.Net.Http.Json;
 using System.Text.Json;
+using System.Text.Json.Nodes;
+using System.Threading;
 using Microsoft.Extensions.Options;
 using Nirbi.ServiceAuth.Configuration;
 
@@ -71,5 +73,75 @@ public sealed class ServiceAccessTokenProvider : IServiceAccessTokenProvider
         {
             _lock.Release();
         }
+    }
+
+    public async Task<string> RegisterServiceAsync(CancellationToken cancellationToken = default)
+    {
+        await _lock.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            var baseUrl = _options.AuthServiceBaseUrl.TrimEnd('/');
+            var client = _httpClientFactory.CreateClient("Nirbi.ServiceAuth.Internal");
+            using var response = await client.PostAsJsonAsync(
+                $"{baseUrl}/api/ServiceToken/register",
+                new ServiceRegisterDto
+                {
+                    ServiceId = _options.ClientId,
+                    ServiceName = _options.ServiceName,
+                    Description = _options.Description,
+                    Scopes = _options.Scopes,
+                    ClientSecret = _options.ClientSecret,
+                },
+                SerializerOptions,
+                cancellationToken).ConfigureAwait(false);
+
+            response.EnsureSuccessStatusCode();
+            var body = await response.Content.ReadFromJsonAsync<ServiceRegistrationResponse>(
+                SerializerOptions,
+                cancellationToken).ConfigureAwait(false);
+
+            if (body?.ClientSecret is null || string.IsNullOrWhiteSpace(body.ClientSecret))
+                throw new InvalidOperationException("AuthService returned an empty token.");
+
+            return body.ClientSecret;
+        }
+        finally
+        {
+            _lock.Release();
+        }
+    }
+
+    public async Task SaveAccessTokenAsync(string token, CancellationToken cancellationToken = default)
+    {
+        await _lock.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            string jsonPath = Path.Combine(Directory.GetCurrentDirectory(), "appsettings.json");
+            if (!File.Exists(jsonPath)) throw new InvalidOperationException($"NirbiServiceAuth: appsettings.json not exists.");
+            string json = File.ReadAllText(jsonPath);
+            JsonNode? node = JsonNode.Parse(json)!;
+            if (node == null) throw new InvalidOperationException($"NirbiServiceAuth: appsettings.json JsonNode is null.");
+            if (node["NirbiServiceAuth"] == null) throw new InvalidOperationException($"NirbiServiceAuth: appsettings.json NirbiServiceAuth is null.");
+            node["NirbiServiceAuth"]["ClientSecret"] = token;
+            await File.WriteAllTextAsync(jsonPath, node.ToJsonString(new JsonSerializerOptions { WriteIndented = true })).ConfigureAwait(false);
+        } 
+        finally
+        {
+            _lock.Release();
+        }
+    }
+
+    public async Task<string> GetAndSaveTokenAsync(CancellationToken cancellationToken = default)
+    {
+        string token = await GetAccessTokenAsync(cancellationToken).ConfigureAwait(false);
+        await SaveAccessTokenAsync(token, cancellationToken).ConfigureAwait(false); 
+        return token;
+    }
+
+    public async Task<string> RegisterAndSaveTokenAsync(CancellationToken cancellationToken = default)
+    {
+        string token = await RegisterServiceAsync(cancellationToken).ConfigureAwait(false);
+        await SaveAccessTokenAsync(token, cancellationToken).ConfigureAwait(false);
+        return token;
     }
 }
