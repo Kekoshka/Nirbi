@@ -17,7 +17,6 @@ namespace AuthService.WebApi.External.Keycloak
 
             services.AddSingleton(Microsoft.Extensions.Options.Options.Create(keycloakOptions));
 
-            // Просто регистрируем Refit client без Polly
             services.AddRefitClient<IKeycloakClient>()
                 .ConfigureHttpClient(c =>
                 {

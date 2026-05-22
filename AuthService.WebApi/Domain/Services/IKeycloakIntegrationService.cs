@@ -11,5 +11,7 @@ namespace AuthService.WebApi.Domain.Services
         Task LogoutAsync(string refreshToken, CancellationToken cancellationToken = default);
         Task<string> RequestPasswordResetAsync(string email, CancellationToken cancellationToken = default);
         Task<IEnumerable<UserSearchResultDto>> SearchUsersByUsernameAsync(string username, CancellationToken cancellationToken = default);
+        Task<UserSearchResultDto?> GetUserByIdAsync(Guid userId, CancellationToken cancellationToken = default);
+
     }
 }

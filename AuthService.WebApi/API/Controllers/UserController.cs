@@ -29,4 +29,13 @@ public class UsersController : ControllerBase
 
         return Ok(results);
     }
-}   
+
+    [HttpGet("{id:guid}")]
+    [Authorize]
+    public async Task<IActionResult> GetById(Guid id, CancellationToken cancellationToken)
+    {
+        var result = await _keycloakService.GetUserByIdAsync(id, cancellationToken);
+        return result is null ? NotFound() : Ok(result);
+    }
+
+}

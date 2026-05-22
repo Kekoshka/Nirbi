@@ -29,4 +29,9 @@
     public record class GetStatusesResponse(
         Guid Id,
         string Name);
+
+    public record TaskNameResponse(
+        Guid Id, 
+        string Name);
+
 }

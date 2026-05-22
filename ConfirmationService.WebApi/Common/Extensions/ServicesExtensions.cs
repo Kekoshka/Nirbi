@@ -3,6 +3,8 @@ using ConfirmationService.DataAccess.Postgres.DomainEvents;
 using ConfirmationService.DataAccess.Postgres.DomainEvents.Interfaces;
 using ConfirmationService.WebApi.Common.Options;
 using ConfirmationService.WebApi.DomainEvents;
+using ConfirmationService.WebApi.Interfaces;
+using ConfirmationService.WebApi.Services;
 using Confluent.SchemaRegistry;
 using ExceptionHandler.Exceptions;
 using Microsoft.EntityFrameworkCore;
@@ -32,16 +34,18 @@ namespace ConfirmationService.WebApi.Common.Extensions
         /// <param name="services"></param>
         public static void RegisterExecutingAsseblyServices(this IServiceCollection services)
         {
-            var serviceTypes = Assembly.GetExecutingAssembly()
-                .GetTypes()
-                .Where(st => st.IsClass && !st.IsAbstract && st.Name.EndsWith("Service"));
-            foreach (var serviceType in serviceTypes)
-            {
-                var interfaceType = serviceType.GetInterfaces()
-                    .FirstOrDefault(it => it.Name == $"I{serviceType.Name}");
-                if (interfaceType is not null)
-                    services.AddScoped(interfaceType, serviceType);
-            }
+            //var serviceTypes = Assembly.GetExecutingAssembly()
+            //    .GetTypes()
+            //    .Where(st => st.IsClass && !st.IsAbstract && st.Name.EndsWith("Service"));
+            //foreach (var serviceType in serviceTypes)
+            //{
+            //    var interfaceType = serviceType.GetInterfaces()
+            //        .FirstOrDefault(it => it.Name == $"I{serviceType.Name}");
+            //    if (interfaceType is not null)
+            //        services.AddScoped(interfaceType, serviceType);
+            //}
+            services.AddScoped<IConfirmationService, Services.ConfirmationService>();
+            services.AddScoped<ICurrentUserService, CurrentUserService>();
         }
 
 
@@ -56,21 +60,17 @@ namespace ConfirmationService.WebApi.Common.Extensions
             });
         }
 
-        /// <summary>
-        /// Регистрирует все мапперы из текущей сборки, имена которых заканчиваются на "Mapper".
-        /// </summary>
-        /// <param name="services">Коллекция сервисов.</param>
-        //public static void RegisterMappers(this IServiceCollection services)
-        //{
-        //    var mappers = Assembly.GetExecutingAssembly()
-        //        .GetTypes()
-        //        .Where(st => st.IsClass && st.Name.EndsWith("Mapper"));
-        //    foreach (var mapper in mappers)
-        //    {
-        //        if (mapper is not null)
-        //            services.AddSingleton(mapper);
-        //    }
-        //}
+        public static void RegisterMappers(this IServiceCollection services)
+        {
+            var mappers = Assembly.GetExecutingAssembly()
+                .GetTypes()
+                .Where(st => st.IsClass && st.Name.EndsWith("Mapper"));
+            foreach (var mapper in mappers)
+            {
+                if (mapper is not null)
+                    services.AddSingleton(mapper);
+            }
+        }
 
         /// <summary>
         /// Связка классов опций приложения с данными из appsettings

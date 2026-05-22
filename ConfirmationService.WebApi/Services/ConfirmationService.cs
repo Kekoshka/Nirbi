@@ -148,8 +148,16 @@ public class ConfirmationService : IConfirmationService
 
         if (confirmation.Status != ConfirmationStatus.Created.ToString())
             throw new BadRequestException($"Cannot revoke confirmation with status: {confirmation.Status}");
-
+        
+        //todo лучше перенести это в паттерн Repository, а то добавление аудитов может где-то забыться
+        ConfirmationAudit confirmationAudit = new(
+            confirmation.Id,
+            confirmation.InitiatorId,
+            ConfirmationStatus.Revoked.ToString(),
+            confirmation.Status);
+        _context.ConfirmationAudits.Add(confirmationAudit);
         confirmation.Revoke(_currentUserService.GetUserId());
+
         await _context.SaveChangesAsync();
 
     }

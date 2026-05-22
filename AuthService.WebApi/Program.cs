@@ -2,11 +2,13 @@ using AuthService.WebApi.Data.Extensions;
 using AuthService.WebApi.Extensions;
 using AuthService.WebApi.External.Keycloak;
 using ExceptionHandler;
+using Nirbi.ServiceAuth.Extensions;
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services
 builder.Services.AddKeycloakIntegration(builder.Configuration);
 builder.Services.AddAuthServiceDependencies(builder.Configuration);
+builder.Services.AddNirbiServiceAuth(builder.Configuration);
 builder.Services.AddControllers();
 builder.Services.AddSwaggerGen();
 builder.Services.AddCors(options =>

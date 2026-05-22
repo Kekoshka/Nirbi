@@ -5,14 +5,22 @@ using Nirbi.ServiceAuth.Extensions;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddHttpClient("DataService", client =>
-    client.BaseAddress = new Uri(builder.Configuration["Services:DataService"]!));
-builder.Services.AddHttpClient("MinorTaskService", client =>
-    client.BaseAddress = new Uri(builder.Configuration["Services:MinorTaskService"]!));
-builder.Services.AddHttpClient("ConfirmationService", client =>
-    client.BaseAddress = new Uri(builder.Configuration["Services:ConfirmationService"]!));
+var services = builder.Configuration.GetSection("Services");
+builder.Services.AddHttpClient(
+    "ConfirmationService",
+    c => c.BaseAddress = new Uri(services["ConfirmationService"]!));
+builder.Services.AddHttpClient(
+    "MinorTaskService",
+    c => c.BaseAddress = new Uri(services["MinorTaskService"]!));
+builder.Services.AddHttpClient(
+    "DataService",
+    c => c.BaseAddress = new Uri(services["DataService"]!));
+builder.Services.AddNirbiAuthedHttpClient(
+    "AuthService",
+    c => c.BaseAddress = new Uri(services["AuthService"]!));
 
 builder.Services.AddScoped<IMinorTaskAggregator, MinorTaskAggregator>();
+builder.Services.AddScoped<IConfirmationsAggregator, ConfirmationsAggregator>();
 
 builder.Services.AddCors(options =>
 {

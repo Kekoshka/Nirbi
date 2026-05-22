@@ -116,13 +116,6 @@ public class Confirmation : IHasDomainEvents
         Status = ConfirmationStatus.Revoked.ToString();
         RespondedAt = DateTime.UtcNow;
 
-        ConfirmationAudit confirmationAudit = new(
-            Id,
-            initiatorId,
-            ConfirmationStatus.Revoked.ToString(),
-            oldStatus);
-        Audits.Add(confirmationAudit);
-
         _domainEvents.Add(new ConfirmationRevokedEvent(Id, ReviewerId));
     }
 

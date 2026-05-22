@@ -62,9 +62,14 @@ namespace NotificationService.WebApi.Services.BackgroundServices
                 EnableAutoCommit = bool.Parse(_kafkaConsumersOptions.EnableAutoCommit ?? "true"),
             };
 
+            var avroConfig = new AvroDeserializerConfig()
+            {
+                SubjectNameStrategy = SubjectNameStrategy.Record
+            };
+
             _consumer = new ConsumerBuilder<string, TMessage>(consumerConfig)
                 .SetKeyDeserializer(Deserializers.Utf8)
-                .SetValueDeserializer(new AvroDeserializer<TMessage>(_schemaRegistry).AsSyncOverAsync<TMessage>())
+                .SetValueDeserializer(new AvroDeserializer<TMessage>(_schemaRegistry,avroConfig).AsSyncOverAsync<TMessage>())
                 .SetErrorHandler((_, e) =>
                 {
                     _logger.LogError("Kafka error: {Reason}", e.Reason);

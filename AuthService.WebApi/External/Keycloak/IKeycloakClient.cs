@@ -82,5 +82,15 @@ namespace AuthService.WebApi.External.Keycloak
             [Header("Authorization")] string authHeader,
             [Query] string username,
             CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// Поиск username по id
+        /// </summary>
+        [Get("/admin/realms/{realm}/users/{userId}")]
+        Task<KeycloakUserDto> GetUserByIdAsync(
+            string realm, Guid userId,
+            [Header("Authorization")] string authorization,
+            CancellationToken ct = default);
+
     }
 }

@@ -179,11 +179,14 @@ public sealed class DataObjectService : IDataObjectService
         var collection = await _db.FileCollections.AsNoTracking()
             .Include(c => c.Owners)
             .Include(c => c.Files)
+            .ThenInclude(c => c.Owners)
             .AsNoTracking()
             .FirstOrDefaultAsync(c => c.Id == collectionId &&
-                (c.Owners.Any(c => c.UserId == currentUserId) ||
-                c.Files.Any(f => f.IsPublic ||
-                f.Owners.Any(c => c.UserId == currentUserId)))
+                (
+                c.Owners.Any(o => o.UserId == currentUserId) ||
+                c.Files.Any(f => f.IsPublic) ||
+                c.Files.Any(f => f.Owners.Any(o => o.UserId == currentUserId))
+                )
                 , cancellationToken)
             .ConfigureAwait(false);
         

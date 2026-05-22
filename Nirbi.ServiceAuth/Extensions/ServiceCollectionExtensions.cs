@@ -159,13 +159,13 @@ public static class ServiceCollectionExtensions
 
     private static string? GetBearerToken(HttpRequest request)
     {
-        // 1. Стандартный заголовок Authorization
+        // 1. пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ Authorization
         var header = request.Headers.Authorization.ToString();
         if (!string.IsNullOrEmpty(header)
             && header.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
             return header["Bearer ".Length..].Trim();
 
-        // 2. SignalR WebSocket/SSE — токен в query string
+        // 2. SignalR WebSocket/SSE пїЅ пїЅпїЅпїЅпїЅпїЅ пїЅ query string
         var queryToken = request.Query["access_token"].ToString();
         if (!string.IsNullOrEmpty(queryToken))
             return queryToken;

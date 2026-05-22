@@ -2,6 +2,7 @@ import { toast }                              from './toast.js';
 import { tokenStore }                         from './tokenStore.js';
 import { authApi }                            from './api.js';
 import { tasksApi }                           from './tasksApi.js';
+import { dataApi }                            from './dataApi.js';
 import { confirmationsApi }                   from './confirmationsApi.js';
 import { startNotifications, onNotification } from './notifications.js';
 import { CONFIRMATION_TYPES,
@@ -23,6 +24,15 @@ let detailMap   = null;
 let formMap     = null;
 let formMarker  = null;
 let mainMarkers = [];
+let removedImageIds = new Set();  // IDs картинок, помеченных на удаление в форме редактирования
+let editingTask    = null;         // полные данные задачи при редактировании (включая images)
+
+// Бэкенд использует статус "Created" как начальный, а не "Pending".
+// Нормализуем оба варианта — иначе кнопки действий не появятся.
+function isPending(status) {
+  const s = (status || '').toLowerCase();
+  return s === 'pending' || s === 'created';
+}
 
 const currentUserId = tokenStore.getUserId();
 
@@ -94,6 +104,35 @@ function isOwner(task) {
 function ownerBadge(task) {
   return isOwner(task) ? 'Вы' : 'Организатор';
 }
+
+// ── Image lightbox ──────────────────────────────────────────────────────────
+function openLightbox(src) {
+  const lb  = document.getElementById('image-lightbox');
+  const img = document.getElementById('lightbox-img');
+  if (!lb || !img) return;
+  img.src = src;
+  lb.hidden = false;
+  document.body.style.overflow = 'hidden';
+}
+function closeLightbox() {
+  const lb = document.getElementById('image-lightbox');
+  if (!lb) return;
+  lb.hidden = true;
+  document.body.style.overflow = '';
+}
+
+// Wire up close handlers once
+(() => {
+  const lb = document.getElementById('image-lightbox');
+  if (!lb) return;
+  document.getElementById('lightbox-close')?.addEventListener('click', closeLightbox);
+  lb.addEventListener('click', e => {
+    if (e.target === lb) closeLightbox();
+  });
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape' && !lb.hidden) closeLightbox();
+  });
+})();
 
 function setLoading(btnId, loading) {
   const btn = document.getElementById(btnId);
@@ -273,8 +312,12 @@ async function openDetail(taskId) {
       .map(img => {
         if (!img.data) return '';
         const ct = img.contentType || 'image/jpeg';
-        return `<img src="data:${ct};base64,${img.data}" alt="${img.originalFileName || ''}" />`;
+        return `<img class="clickable-img" src="data:${ct};base64,${img.data}" alt="${img.originalFileName || ''}" />`;
       }).join('');
+    // Bind click → lightbox
+    gallery.querySelectorAll('img.clickable-img').forEach(im => {
+      im.addEventListener('click', () => openLightbox(im.src));
+    });
   } else {
     gallery.hidden = true;
     gallery.innerHTML = '';
@@ -309,11 +352,11 @@ async function openDetail(taskId) {
     const myApplication = confirmations.find(c =>
       String(c.initiatorId) === String(currentUserId) &&
       String(c.entityId)    === String(task.id)      &&
-      (c.confirmationType || '') === CONFIRMATION_TYPES.TASK_PARTICIPATION
+      (c.confirmationType || '') === CONFIRMATION_TYPES.RESPOND_TO_MINOR_TASK
     );
     const status = (myApplication?.status || '').toLowerCase();
 
-    if (myApplication && status === 'pending') {
+    if (myApplication && isPending(myApplication.status)) {
       // Ожидает решения — кнопка "Отозвать"
       footer.innerHTML = `
         <div class="detail-apply-info detail-apply-pending">
@@ -363,7 +406,7 @@ async function openDetail(taskId) {
         setLoading('detail-btn-join', true);
         try {
           await confirmationsApi.create({
-            confirmationType: CONFIRMATION_TYPES.TASK_PARTICIPATION,
+            confirmationType: CONFIRMATION_TYPES.RESPOND_TO_MINOR_TASK,
             entityId:         task.id,
             reviewerId:       ownerId,
             expirationHours:  CONFIRMATION_DEFAULT_EXPIRATION_HOURS,
@@ -400,7 +443,8 @@ async function openDetail(taskId) {
 
 // ── Create / Edit Form ────────────────────────────────────────────────────────
 function openForm(task = null) {
-  editingId = task ? task.id : null;
+  editingId   = task ? task.id : null;
+  editingTask = task ?? null;
   document.getElementById('form-modal-title').textContent = task ? 'Редактировать задачу' : 'Новая задача';
 
   // fill fields
@@ -419,6 +463,9 @@ function openForm(task = null) {
   const uploadText = document.getElementById('file-upload-text');
   if (uploadText) uploadText.textContent = 'Нажмите для выбора изображений';
 
+  // Reset list of images user wants removed
+  removedImageIds = new Set();
+
   // Existing images — показываем только в режиме редактирования
   const existingWrap = document.getElementById('tf-existing-wrap');
   const existingImages = document.getElementById('tf-existing-images');
@@ -432,8 +479,30 @@ function openForm(task = null) {
         existingImages.innerHTML = arr
           .slice()
           .sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0))
-          .map(img => `<img class="preview-img" src="data:${img.contentType || 'image/jpeg'};base64,${img.data}" alt="${img.originalFileName || ''}" />`)
+          .map(img => `
+            <div class="preview-img-wrap" data-file-id="${img.id}">
+              <img class="preview-img clickable-img" src="data:${img.contentType || 'image/jpeg'};base64,${img.data}" alt="${img.originalFileName || ''}" />
+              <button type="button" class="preview-img-remove" data-file-id="${img.id}" aria-label="Удалить">
+                <svg viewBox="0 0 14 14" fill="none"><path d="M1 1l12 12M13 1L1 13" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+              </button>
+            </div>`)
           .join('');
+
+        // Wire up clicks: × → remove, image → lightbox
+        existingImages.querySelectorAll('.preview-img-remove').forEach(btn => {
+          btn.addEventListener('click', e => {
+            e.stopPropagation();
+            const id = btn.dataset.fileId;
+            removedImageIds.add(id);
+            btn.closest('.preview-img-wrap')?.remove();
+            if (!existingImages.querySelector('.preview-img-wrap')) {
+              existingWrap.hidden = true;
+            }
+          });
+        });
+        existingImages.querySelectorAll('img.clickable-img').forEach(im => {
+          im.addEventListener('click', () => openLightbox(im.src));
+        });
       } else {
         existingWrap.hidden = true;
         existingImages.innerHTML = '';
@@ -449,6 +518,7 @@ function openForm(task = null) {
       tasksApi.getById(task.id).then(full => {
         // Не перерисовываем, если форма уже закрыта или мы перешли к другой задаче
         if (modalForm.hidden || editingId !== task.id) return;
+        editingTask = full;   // обновляем — теперь есть images[].fileCollectionId
         renderExisting(full?.images);
       }).catch(() => { /* молча — фото просто не покажутся */ });
     }
@@ -568,6 +638,34 @@ document.getElementById('task-form').addEventListener('submit', async e => {
 
     if (editingId) {
       await tasksApi.update(editingId, payload);
+
+      // Загружаем новые изображения в существующую коллекцию
+      const imageInput = document.getElementById('tf-images');
+      const newImages  = imageInput ? Array.from(imageInput.files) : [];
+      if (newImages.length) {
+        // fileCollectionId берём из первого изображения (все в одной коллекции)
+        const collectionId = editingTask?.images?.[0]?.fileCollectionId
+                          ?? editingTask?.fileCollectionId;
+        if (collectionId) {
+          const uploadResults = await Promise.allSettled(
+            newImages.map(f => dataApi.uploadToCollection(collectionId, f))
+          );
+          const failed = uploadResults.filter(r => r.status === 'rejected').length;
+          if (failed) toast.warning(`${failed} из ${newImages.length} изображений не удалось загрузить`);
+        } else {
+          toast.warning('Не удалось добавить изображения: коллекция не определена. Попробуйте пересоздать задачу.');
+        }
+      }
+
+      // Удаляем картинки, помеченные ×
+      if (removedImageIds.size) {
+        const ids = [...removedImageIds];
+        const results = await Promise.allSettled(ids.map(id => dataApi.deleteFile(id)));
+        const failed = results.filter(r => r.status === 'rejected').length;
+        if (failed) toast.warning(`Часть изображений (${failed}) не удалось удалить`);
+        removedImageIds.clear();
+      }
+
       toast.success('Задача обновлена');
     } else {
       const imageInput = document.getElementById('tf-images');
@@ -667,12 +765,10 @@ function saveDismissed() {
 function unreadCount() {
   return confirmations.filter(c => {
     if (dismissedIds.has(c.id)) return false;
+    // Только входящие (где я reviewer) — это то, что требует моей реакции
+    if (String(c.reviewerId) !== String(currentUserId)) return false;
     const status = (c.status || '').toLowerCase();
-    // pending как reviewer = надо решить
-    if (status === 'pending' && String(c.reviewerId) === String(currentUserId)) return true;
-    // resolved для моих заявок = надо увидеть исход
-    if (String(c.initiatorId) === String(currentUserId) && status !== 'pending') return true;
-    return false;
+    return isPending(c.status);
   }).length;
 }
 
@@ -701,46 +797,51 @@ function renderNotifications() {
     return;
   }
 
+  // В панели — только то, где я reviewer (входящие заявки на МОИ задачи).
+  // Свои отправленные/полученные ответы пользователь смотрит на /confirmations.html
+  const incoming = confirmations.filter(c => String(c.reviewerId) === String(currentUserId));
+
+  if (!incoming.length) {
+    notifList.innerHTML = '<div class="notif-empty">Нет уведомлений</div>';
+    refreshBadge();
+    return;
+  }
+
   // Сортируем новые сверху
-  const sorted = [...confirmations].sort((a, b) =>
+  const sorted = [...incoming].sort((a, b) =>
     new Date(b.createdAt || 0) - new Date(a.createdAt || 0)
   );
 
   notifList.innerHTML = sorted.map(c => {
-    const status     = (c.status || '').toLowerCase();
-    const isReviewer = String(c.reviewerId)  === String(currentUserId);
-    const isInitiator= String(c.initiatorId) === String(currentUserId);
-    const taskName   = c.metaData?.taskName || 'задача';
-    const applicant  = c.metaData?.applicantUsername || '';
+    const status    = (c.status || '').toLowerCase();
+    const taskName  = c.metaData?.taskName || 'задача';
+    const applicant = c.metaData?.applicantUsername || '';
 
     let title = '';
     let body  = '';
     let actions = '';
 
-    if (isReviewer && status === 'pending') {
+    if (isPending(c.status)) {
       title = 'Новая заявка на участие';
       body  = `${applicant ? `<strong>${applicant}</strong> хочет` : 'Кто-то хочет'} присоединиться к задаче «${taskName}»`;
       actions = `
         <button class="notif-btn notif-btn-accept" data-action="accept" data-id="${c.id}">Принять</button>
         <button class="notif-btn notif-btn-reject" data-action="reject" data-id="${c.id}">Отклонить</button>`;
-    } else if (isReviewer && status !== 'pending') {
-      title = status === 'accepted' ? 'Заявка принята' : status === 'rejected' ? 'Заявка отклонена' : 'Заявка отозвана';
-      body  = `Заявка по задаче «${taskName}»`;
-    } else if (isInitiator) {
-      if (status === 'pending') {
-        title = 'Ожидает ответа';
-        body  = `Ваша заявка на «${taskName}» ожидает решения организатора`;
-        actions = `<button class="notif-btn notif-btn-reject" data-action="revoke" data-id="${c.id}">Отозвать</button>`;
-      } else if (status === 'accepted') {
-        title = '✓ Ваша заявка принята';
-        body  = `Вы стали волонтёром задачи «${taskName}»`;
-      } else if (status === 'rejected') {
-        title = '✕ Ваша заявка отклонена';
-        body  = `${c.rejectionReason ? `Причина: ${c.rejectionReason}` : `По задаче «${taskName}»`}`;
-      } else {
-        title = 'Заявка завершена';
-        body  = `Статус: ${c.status}`;
-      }
+    } else if (status === 'revoked') {
+      title = 'Отклик отозван';
+      body  = `${applicant ? `<strong>${applicant}</strong> отозвал` : 'Пользователь отозвал'} заявку на «${taskName}»`;
+    } else if (status === 'accepted') {
+      title = 'Вы приняли заявку';
+      body  = `${applicant ? `<strong>${applicant}</strong> — задача` : 'Задача'} «${taskName}»`;
+    } else if (status === 'rejected') {
+      title = 'Вы отклонили заявку';
+      body  = `Задача «${taskName}»`;
+    } else if (status === 'expired') {
+      title = 'Заявка истекла';
+      body  = `Без ответа по задаче «${taskName}»`;
+    } else {
+      title = c.status || 'Заявка';
+      body  = `По задаче «${taskName}»`;
     }
 
     const dismissedClass = dismissedIds.has(c.id) ? 'notif-item-dismissed' : '';
@@ -803,7 +904,7 @@ async function loadConfirmations() {
       seen.add(c.id);
       // оставляем только нужный тип
       const t = c.confirmationType || '';
-      return !t || t === CONFIRMATION_TYPES.TASK_PARTICIPATION;
+      return !t || t === CONFIRMATION_TYPES.RESPOND_TO_MINOR_TASK;
     });
 
     renderNotifications();
@@ -905,8 +1006,11 @@ function handleConfirmationRespond(payload) {
 }
 
 function handleConfirmationRevoked(payload) {
-  toast.info('Заявка отозвана');
-  // Если эта заявка была в dismissedIds, оставим как есть
+  const taskName  = payload?.metaData?.taskName          || '';
+  const applicant = payload?.metaData?.applicantUsername || '';
+  toast.info(
+    `${applicant ? applicant : 'Пользователь'} отозвал заявку${taskName ? ` на «${taskName}»` : ''}`
+  );
   loadConfirmations();
 }
 
@@ -914,9 +1018,19 @@ onNotification('ShowConfirmationCreated',  handleIncomingConfirmation);
 onNotification('ShowConfirmationRespond',  handleConfirmationRespond);
 onNotification('ShowConfirmationRevoked',  handleConfirmationRevoked);
 
-// ── Boot ──────────────────────────────────────────────────────────────────────
+// ── Boot ─────────────────────────────────────────────────────────────────────
 initMainMap();
 loadStatuses();
 loadTasks();
 loadConfirmations();
 startNotifications();
+
+// Если пришли со страницы подтверждений — сразу открываем нужную задачу
+const _urlParams = new URLSearchParams(window.location.search);
+const _openTaskId = _urlParams.get('openTask');
+if (_openTaskId) {
+  // Убираем параметр из URL, чтобы не открывалось при перезагрузке
+  history.replaceState({}, '', window.location.pathname);
+  // openDetail сам загрузит задачу через getById — не ждём loadTasks()
+  openDetail(_openTaskId);
+}

@@ -37,6 +37,16 @@ public class MinorTasksController : ControllerBase
         return Ok(minorTask);
     }
 
+    [HttpPost("tasks/names")]
+    public async Task<IActionResult> GetTaskNames(
+        [FromBody] GetTaskNamesByIdsRequest request,
+        CancellationToken cancellationToken)
+    {
+        var result = await _mediator.Send(
+            new GetTasksByIdsQuery(request.Ids ?? []), cancellationToken);
+        return Ok(result);
+    }
+
     [HttpGet("tasks")]
     public async Task<IActionResult> GetTasks(
         [FromQuery] int? limit,

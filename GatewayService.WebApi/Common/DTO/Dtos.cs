@@ -97,7 +97,77 @@ public class UpdateMinorTaskStatusGatewayRequest
     public Guid StatusId { get; set; }
 }
 
-// ─── DataService ─────────────────────────────────────────────────────────────
+// ─── Confirmations Aggregation ────────────────────────────────────────────────
+
+/// <summary>Внутренний proxy-DTO для ответов из ConfirmationService.</summary>
+public class ConfirmationBaseResponse
+{
+    public Guid Id { get; set; }
+    public string ConfirmationType { get; set; }
+    public Guid EntityId { get; set; }
+    public Guid InitiatorId { get; set; }
+    public Guid ReviewerId { get; set; }
+    public string Status { get; set; }
+    public string MetaData { get; set; }
+    public DateTime CreatedAt { get; set; }
+    public DateTime ExpiresAt { get; set; }
+    public DateTime? RespondedAt { get; set; }
+    public string? RejectionReason { get; set; }
+    public ICollection<ConfirmationAuditDTO> Audits { get; set; } = new List<ConfirmationAuditDTO>();
+}
+
+public class ConfirmationAuditDTO()
+{
+    public Guid Id { get; set; }
+    public Guid ConfirmationId { get; set; }
+    public string OldStatus { get; set; }
+    public string NewStatus { get; set; }
+    public DateTime ChangedAt { get; set; } = DateTime.UtcNow;
+    public Guid ChangedBy { get; set; }
+}
+/// <summary>Обогащённый ответ с username инициатора/reviewer и названием задачи.</summary>
+public class EnrichedConfirmationResponse
+{
+    public Guid Id { get; set; }
+    public string ConfirmationType { get; set; } = string.Empty;
+
+    public Guid EntityId { get; set; }
+    /// <summary>Название задачи (или другой сущности) — обогащается Gateway.</summary>
+    public string? EntityName { get; set; }
+
+    public Guid InitiatorId { get; set; }
+    /// <summary>Username инициатора — обогащается Gateway из AuthService.</summary>
+    public string? InitiatorUsername { get; set; }
+
+    public Guid ReviewerId { get; set; }
+    /// <summary>Username reviewer'а — обогащается Gateway из AuthService.</summary>
+    public string? ReviewerUsername { get; set; }
+
+    public string Status { get; set; } = string.Empty;
+    public DateTime CreatedAt { get; set; }
+    public DateTime ExpiresAt { get; set; }
+    public DateTime? RespondedAt { get; set; }
+    public string? RejectionReason { get; set; }
+    public string MetaData { get; set; }
+}
+
+// ─── Auth ─────────────────────────────────────────────────────────────────────
+
+/// <summary>Ответ AuthService GET /api/Users/{id} — для внутреннего использования в агрегаторе.</summary>
+public class UserLookupDto
+{
+    public Guid UserId { get; set; }
+    public string Username { get; set; } = string.Empty;
+}
+
+// ─── Tasks ────────────────────────────────────────────────────────────────────
+
+/// <summary>Ответ MinorTaskService POST /api/tasks/names — для внутреннего использования.</summary>
+public class TaskNameLookupDto
+{
+    public Guid Id { get; set; }
+    public string Name { get; set; } = string.Empty;
+}
 
 public class FileMetadataDto
 {
