@@ -15,6 +15,7 @@ namespace Nirbi.ServiceAuth.Extensions
     {
         private readonly IServiceScopeFactory _scopeFactory;
         private readonly ILogger<HostedBase> _logger;
+        private int n = 4;
 
         public HostedBase(
             IServiceScopeFactory scopeFactory,
@@ -24,18 +25,28 @@ namespace Nirbi.ServiceAuth.Extensions
             _logger = logger;
         }
 
-        public async Task StartAsync(CancellationToken cancellationToken)
+        public async Task StartAsync(CancellationToken cancellationToken = default)
         {
             try
             {
+                string token = "";
                 using var scope = _scopeFactory.CreateScope();
                 var tokenService = scope.ServiceProvider.GetRequiredService<IServiceAccessTokenProvider>();
-                string token = await tokenService.RegisterAndSaveTokenAsync().ConfigureAwait(false);
+                for (int i = 0; i < n; i++)
+                {
+                    token = await tokenService.RegisterAndSaveTokenAsync(cancellationToken).ConfigureAwait(false);
+                    if (!string.IsNullOrEmpty(token))
+                    {
+                        break;
+                    }
+                    _logger.LogError("HostedBase: try {n}. Token is empty.", n);
+                    Task.Delay(30000).Wait();
+                }
                 _logger.LogInformation("HostedBase: Service registered with token: {token}", token);
             }
             catch (Exception ex)
             {
-                _logger.LogError("HostedBase: {Message}", ex.Message);
+                _logger.LogError("HostedBase: {Message},", ex.Message);
             }
         }
 

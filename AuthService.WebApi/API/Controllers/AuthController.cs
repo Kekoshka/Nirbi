@@ -29,7 +29,14 @@ public class AuthController : ControllerBase
         CancellationToken cancellationToken)
     {
         var result = await _keycloakService.RegisterAsync(
-            request.Username, request.Email, request.Password, cancellationToken);
+            FName: request.FName,
+            SName: request.SName,
+            LName: request.LName,
+            phone: request.phone,
+            email: request.email,
+            password: request.password,
+            cancellationToken);
+
         return Ok(result);
     }
 

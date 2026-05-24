@@ -133,15 +133,29 @@ public sealed class ServiceAccessTokenProvider : IServiceAccessTokenProvider
 
     public async Task<string> GetAndSaveTokenAsync(CancellationToken cancellationToken = default)
     {
-        string token = await GetAccessTokenAsync(cancellationToken).ConfigureAwait(false);
-        await SaveAccessTokenAsync(token, cancellationToken).ConfigureAwait(false); 
-        return token;
+        try
+        {
+            string token = await GetAccessTokenAsync(cancellationToken).ConfigureAwait(false);
+            await SaveAccessTokenAsync(token, cancellationToken).ConfigureAwait(false);
+            return token;
+        }
+        catch
+        {
+            return "";
+        }
     }
 
     public async Task<string> RegisterAndSaveTokenAsync(CancellationToken cancellationToken = default)
     {
-        string token = await RegisterServiceAsync(cancellationToken).ConfigureAwait(false);
-        await SaveAccessTokenAsync(token, cancellationToken).ConfigureAwait(false);
-        return token;
+        try
+        {
+            string token = await RegisterServiceAsync(cancellationToken).ConfigureAwait(false);
+            await SaveAccessTokenAsync(token, cancellationToken).ConfigureAwait(false);
+            return token;
+        }
+        catch
+        {
+            return "";
+        }
     }
 }
