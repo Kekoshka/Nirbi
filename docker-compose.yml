@@ -174,6 +174,7 @@ services:
       Keycloak__AdminClientSecret: CIVfy4OyV4G0jLdtRp7LTAgI0hyjiLL4
       Keycloak__PublicClientId: nirbi
       ServiceTokens__AccessTokenExpirationMinutes: 60
+      NirbiServiceAuth__ClientSecret: 
       ServiceTokens__MaxTokenCacheMinutes: 50
       Logging__LogLevel__Default: Information
       Logging__LogLevel__Microsoft: Warning
@@ -240,6 +241,7 @@ services:
       S3Storage__AccessKey: minioadmin
       S3Storage__SecretKey: minioadmin
       S3Storage__ForcePathStyle: "true"
+      NirbiServiceAuth__ClientSecret: 
       NirbiServiceAuth__ServiceJwt__Issuer: myapp-auth
       NirbiServiceAuth__ServiceJwt__Audience: myapp-services
       NirbiServiceAuth__ServiceJwt__SigningKey: your_super_secret_key_min_32_chars_long_here_change_me_123456789
@@ -304,7 +306,7 @@ services:
       ExternalServicesOptions__CommunicationServiceAddress: ""
       NirbiServiceAuth__AuthServiceBaseUrl: http://authservice.webapi:5000
       NirbiServiceAuth__ClientId: confirmation-service
-      NirbiServiceAuth__ClientSecret: rZ7BfrlKJWEe5Wt5Wsa5m72S9Xiwu8cRDae+R+lC+e4=
+      NirbiServiceAuth__ClientSecret: 
       NirbiServiceAuth__TokenRefreshSkewSeconds: 120
       NirbiServiceAuth__ServiceJwt__Issuer: myapp-auth
       NirbiServiceAuth__ServiceJwt__Audience: myapp-services
@@ -347,6 +349,7 @@ services:
       Services__DataService: http://dataservice.webapi:5000
       Services__MinorTaskService: http://minortaskservice.webapi:5000
       Services__ConfirmationService: http://confirmationservice.webapi:5000
+      NirbiServiceAuth__ClientSecret: 
       Cors__AllowedOrigins__0: http://apigateway:3000
       Cors__AllowedOrigins__1: http://apigateway:5173
     ports:
