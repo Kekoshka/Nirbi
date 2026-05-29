@@ -1,6 +1,5 @@
 using ConfirmationService.DataAccess.Context;
 using ConfirmationService.DataAccess.Models;
-using ConfirmationService.WebApi.DomainEvents.Events;
 using Microsoft.EntityFrameworkCore;
 using System.Text.Json;
 using ConfirmationService.DataAccess.Postgres.DomainEvents.Interfaces;
@@ -73,7 +72,7 @@ public class ConfirmationService : IConfirmationService
         return confirmation;
     }
 
-    public async Task<ICollection<Confirmation>> GetConfirmationsByReviewerAsync()
+    public async Task<ICollection<ConfirmationDTO>> GetConfirmationsByReviewerAsync()
     {
         var confirmations = await _context.Confirmations
             .Where(c => c.ReviewerId == _currentUserService.GetUserId() &&
@@ -84,10 +83,10 @@ public class ConfirmationService : IConfirmationService
         if (confirmations is null)
             throw new NotFoundException();
 
-        return confirmations;
+        return confirmations.ToConfirmationsDTO();
     }
 
-    public async Task<IEnumerable<Confirmation>> GetConfirmationsByInitiatorAsync()
+    public async Task<ICollection<ConfirmationDTO>> GetConfirmationsByInitiatorAsync()
     {
         var confirmations = await _context.Confirmations
             .Where(c => c.InitiatorId == _currentUserService.GetUserId())
@@ -97,7 +96,7 @@ public class ConfirmationService : IConfirmationService
         if (confirmations is null)
             throw new NotFoundException();
 
-        return confirmations;
+        return confirmations.ToConfirmationsDTO();
     }
 
     public async Task RespondToConfirmationAsync(RespondToConfirmationDTO dto)
@@ -149,8 +148,16 @@ public class ConfirmationService : IConfirmationService
 
         if (confirmation.Status != ConfirmationStatus.Created.ToString())
             throw new BadRequestException($"Cannot revoke confirmation with status: {confirmation.Status}");
-
+        
+        //todo лучше перенести это в паттерн Repository, а то добавление аудитов может где-то забыться
+        ConfirmationAudit confirmationAudit = new(
+            confirmation.Id,
+            confirmation.InitiatorId,
+            ConfirmationStatus.Revoked.ToString(),
+            confirmation.Status);
+        _context.ConfirmationAudits.Add(confirmationAudit);
         confirmation.Revoke(_currentUserService.GetUserId());
+
         await _context.SaveChangesAsync();
 
     }

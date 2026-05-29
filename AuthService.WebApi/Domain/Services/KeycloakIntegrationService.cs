@@ -2,10 +2,12 @@
 using AuthService.WebApi.Configuration;
 using AuthService.WebApi.External.Keycloak;
 using AuthService.WebApi.External.Keycloak.Models;
+using ExceptionHandler.Exceptions;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Options;
 using Refit;
 using System.IdentityModel.Tokens.Jwt;
+using System.Net;
 
 namespace AuthService.WebApi.Domain.Services;
 
@@ -170,6 +172,20 @@ public class KeycloakIntegrationService : IKeycloakIntegrationService
             .Where(u => u.Id is not null)
             .Select(u => new UserSearchResultDto(Guid.Parse(u.Id), u.Email));
     }
+
+    public async Task<UserSearchResultDto?> GetUserByIdAsync(
+    Guid userId,
+    CancellationToken cancellationToken = default)
+    {
+        var adminToken = await GetAdminTokenAsync(cancellationToken);
+        var user = await _keycloakClient.GetUserByIdAsync(
+            _keycloakOptions.Realm, userId, $"Bearer {adminToken}", cancellationToken);
+
+        if (user?.Id is null)
+            throw new NotFoundException($"User with id {userId} not found");
+        return new UserSearchResultDto(Guid.Parse(user.Id), user.Username);
+    }
+
 
     // ── helpers ───────────────────────────────────────────────────────────────
 

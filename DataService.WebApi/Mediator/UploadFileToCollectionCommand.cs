@@ -8,7 +8,8 @@ public sealed record UploadFileToCollectionCommand(
     Stream Content,
     string ContentType,
     string? OriginalFileName,
-    long? KnownSizeBytes) : IRequest<Guid>;
+    long? KnownSizeBytes,
+    bool IsPublic) : IRequest<Guid>;
 
 public sealed class UploadFileToCollectionCommandHandler : IRequestHandler<UploadFileToCollectionCommand, Guid>
 {
@@ -23,5 +24,6 @@ public sealed class UploadFileToCollectionCommandHandler : IRequestHandler<Uploa
             request.ContentType,
             request.OriginalFileName,
             request.KnownSizeBytes,
+            request.IsPublic,
             cancellationToken);
 }

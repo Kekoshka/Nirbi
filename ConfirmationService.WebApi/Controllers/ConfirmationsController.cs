@@ -26,7 +26,7 @@ public class ConfirmationsController : ControllerBase
     /// Create a new confirmation request
     /// </summary>
     [HttpPost]
-    public async Task<ActionResult<ConfirmationResponse>> CreateConfirmation(
+    public async Task<IActionResult> CreateConfirmation(
         CreateConfirmationRequest request)
     {
         var confirmationId = await _confirmationService.CreateConfirmationAsync(request);
@@ -58,7 +58,7 @@ public class ConfirmationsController : ControllerBase
     /// ѕолучить свои подтверждени€ по id инициатора
     /// </summary>
     [HttpGet("initiator/{initiatorId}")]
-    public async Task<ActionResult<IEnumerable<ConfirmationResponse>>> GetByInitiator(Guid initiatorId)
+    public async Task<IActionResult> GetByInitiator(Guid initiatorId)
     {
         var confirmations = await _confirmationService.GetConfirmationsByInitiatorAsync();
         return Ok(confirmations);
@@ -68,7 +68,7 @@ public class ConfirmationsController : ControllerBase
     /// Accept or reject confirmation
     /// </summary>
     [HttpPost("{confirmationId}/respond")]
-    public async Task<ActionResult<ConfirmationResponse>> RespondToConfirmation(
+    public async Task<IActionResult> RespondToConfirmation(
         Guid confirmationId,
         RespondToConfirmationRequest request)
     {
@@ -84,7 +84,7 @@ public class ConfirmationsController : ControllerBase
     /// Revoke confirmation (by initiator)
     /// </summary>
     [HttpPost("{id}/revoke")]
-    public async Task<ActionResult<ConfirmationResponse>> RevokeConfirmation(
+    public async Task<IActionResult> RevokeConfirmation(
         Guid id,
         [FromQuery] Guid initiatorId)
     {

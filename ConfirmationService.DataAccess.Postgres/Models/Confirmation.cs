@@ -1,7 +1,6 @@
 using ConfirmationService.DataAccess.Enums;
 using ConfirmationService.DataAccess.Postgres.DomainEvents;
 using ConfirmationService.DataAccess.Postgres.DomainEvents.Interfaces;
-using ConfirmationService.WebApi.DomainEvents.Events;
 
 namespace ConfirmationService.DataAccess.Models;
 
@@ -68,6 +67,7 @@ public class Confirmation : IHasDomainEvents
     /// </summary>
     public ICollection<ConfirmationAudit> Audits { get; set; } = new List<ConfirmationAudit>();
 
+    public Confirmation() { }
     public Confirmation(string confirmationType, Guid entityId, Guid initiatorId, Guid reviewerId, string metaData, DateTime expiresAt)
     {
         Id = Guid.NewGuid();
@@ -115,13 +115,6 @@ public class Confirmation : IHasDomainEvents
         var oldStatus = Status;
         Status = ConfirmationStatus.Revoked.ToString();
         RespondedAt = DateTime.UtcNow;
-
-        ConfirmationAudit confirmationAudit = new(
-            Id,
-            initiatorId,
-            ConfirmationStatus.Revoked.ToString(),
-            oldStatus);
-        Audits.Add(confirmationAudit);
 
         _domainEvents.Add(new ConfirmationRevokedEvent(Id, ReviewerId));
     }

@@ -34,6 +34,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\Nirbi.ServiceAuth\Nirbi.ServiceAuth.csproj" />
     <ProjectReference Include="..\Shared.ExceptionHandler\ExceptionHandler\ExceptionHandler.csproj" />
   </ItemGroup>
 

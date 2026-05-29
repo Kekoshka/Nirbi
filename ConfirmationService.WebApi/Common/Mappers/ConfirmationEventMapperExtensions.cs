@@ -1,5 +1,4 @@
-﻿using ConfirmationService.WebApi.DomainEvents.Events;
-using ConfirmationService.DataAccess.Postgres.DomainEvents;
+﻿using ConfirmationService.DataAccess.Postgres.DomainEvents;
 using Shared.Mapping;
 namespace ConfirmationService.Mapping;
 

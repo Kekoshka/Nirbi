@@ -37,8 +37,13 @@ namespace MinorTaskService.WebApi.Services
 
             using var schemaRegistry = new CachedSchemaRegistryClient(schemaRegistryConfig);
 
+            var avroConfig = new AvroSerializerConfig()
+            {
+                SubjectNameStrategy = SubjectNameStrategy.Record
+            };
+
             using var producer = new ProducerBuilder<TKey, TValue>(producerConfig)
-            .SetValueSerializer(new AvroSerializer<TValue>(schemaRegistry))
+            .SetValueSerializer(new AvroSerializer<TValue>(schemaRegistry,avroConfig))
             .Build();
 
             var message = new Message<TKey, TValue>()

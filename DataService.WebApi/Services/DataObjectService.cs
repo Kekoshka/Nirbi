@@ -1,10 +1,13 @@
 using DataService.DataAccess.Postgres.Context;
 using DataService.DataAccess.Postgres.Models;
+using DataService.WebApi.Common;
 using DataService.WebApi.Common.DTO;
 using DataService.WebApi.Interfaces;
 using ExceptionHandler.Exceptions;
 using Microsoft.EntityFrameworkCore;
 using Nirbi.ServiceAuth.Identity;
+using System.Linq.Expressions;
+using static Amazon.S3.Util.S3EventNotification;
 
 namespace DataService.WebApi.Services;
 
@@ -68,6 +71,7 @@ public sealed class DataObjectService : IDataObjectService
         string contentType,
         string? originalFileName,
         long? knownSizeBytes,
+        bool isPublic = false,
         CancellationToken cancellationToken = default)
     {
         var id = Guid.NewGuid();
@@ -86,6 +90,7 @@ public sealed class DataObjectService : IDataObjectService
             SizeBytes = size,
             OriginalFileName = originalFileName,
             CreatedAtUtc = DateTime.UtcNow,
+            IsPublic = isPublic,
             Owners = new List<Owner> { new() { UserId = _currentUserService.GetUserId() } },
         };
 
@@ -100,6 +105,7 @@ public sealed class DataObjectService : IDataObjectService
         string contentType,
         string? originalFileName,
         long? knownSizeBytes,
+        bool isPublic = false,
         CancellationToken cancellationToken = default)
     {
         var collection = await _db.FileCollections
@@ -135,6 +141,7 @@ public sealed class DataObjectService : IDataObjectService
             SizeBytes = size,
             OriginalFileName = originalFileName,
             CreatedAtUtc = DateTime.UtcNow,
+            IsPublic = isPublic,
             // файлы в коллекции не имеют своих владельцев Ч владелец наследуетс€ от коллекции
             Owners = new List<Owner>(),
         };
@@ -161,32 +168,35 @@ public sealed class DataObjectService : IDataObjectService
         if (!IsOwner(entity, _currentUserService.GetUserId()))
             throw new ForbiddenException();
 
-        return ToDto(entity);
+        return entity.ToDto();
     }
 
-    public async Task<IReadOnlyList<FileMetadataDto>> ListByCollectionAsync(
+    public async Task<List<FileMetadataDto>> ListByCollectionAsync(
         Guid collectionId,
         CancellationToken cancellationToken = default)
     {
+        var currentUserId = _currentUserService.GetUserId();
         var collection = await _db.FileCollections.AsNoTracking()
             .Include(c => c.Owners)
-            .FirstOrDefaultAsync(c => c.Id == collectionId, cancellationToken)
+            .Include(c => c.Files)
+            .ThenInclude(c => c.Owners)
+            .AsNoTracking()
+            .FirstOrDefaultAsync(c => c.Id == collectionId &&
+                (
+                c.Owners.Any(o => o.UserId == currentUserId) ||
+                c.Files.Any(f => f.IsPublic) ||
+                c.Files.Any(f => f.Owners.Any(o => o.UserId == currentUserId))
+                )
+                , cancellationToken)
             .ConfigureAwait(false);
-
+        
         if (collection is null)
-            return [];
+            throw new NotFoundException($"Forbidden or collection with id {collectionId} not found");
 
-        if (!collection.Owners.Any(o => o.UserId == _currentUserService.GetUserId()))
-            throw new ForbiddenException();
 
-        var list = await _db.StoredFiles.AsNoTracking()
-            .Where(f => f.FileCollectionId == collectionId)
-            .OrderBy(f => f.SortOrder)
-            .ThenBy(f => f.CreatedAtUtc)
-            .ToListAsync(cancellationToken)
-            .ConfigureAwait(false);
-
-        return list.Select(ToDto).ToList();
+        if (collection.Owners.Any(o => o.UserId == currentUserId))
+            return collection.Files.ToDto();    
+        return collection.Files.Where(f => f.IsPublic || f.Owners.Any(o => o.UserId == currentUserId)).ToDto();
     }
 
     public async Task<FileDownloadResult?> OpenReadAsync(
@@ -203,7 +213,8 @@ public sealed class DataObjectService : IDataObjectService
         if (entity is null)
             return null;
 
-        if (!IsOwner(entity, _currentUserService.GetUserId()))
+        if (!IsOwner(entity, _currentUserService.GetUserId()) &&
+            !entity.IsPublic)
             throw new ForbiddenException();
 
         var buffer = await _storage.GetObjectStreamAsync(entity.StorageKey, cancellationToken).ConfigureAwait(false);
@@ -242,7 +253,4 @@ public sealed class DataObjectService : IDataObjectService
             : file.FileCollection!.Owners.Any(o => o.UserId == userId) || _caller.IsService;
 
     private static string BuildStorageKey(Guid fileId) => $"v1/objects/{fileId:N}";
-
-    private static FileMetadataDto ToDto(StoredFile f) =>
-        new(f.Id, f.FileCollectionId, f.SortOrder, f.ContentType, f.SizeBytes, f.OriginalFileName, f.CreatedAtUtc);
 }

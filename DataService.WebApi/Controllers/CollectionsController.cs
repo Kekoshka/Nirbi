@@ -33,6 +33,7 @@ public class CollectionsController : ControllerBase
     [RequestSizeLimit(524_288_000)]
     public async Task<ActionResult<Guid>> UploadToCollection(
         Guid id,
+        bool isPublic,
         IFormFile file,
         CancellationToken cancellationToken)
     {
@@ -43,7 +44,7 @@ public class CollectionsController : ControllerBase
         try
         {
             var fileId = await _mediator.Send(
-                new UploadFileToCollectionCommand(id, stream, file.ContentType, file.FileName, file.Length),
+                new UploadFileToCollectionCommand(id, stream, file.ContentType, file.FileName, file.Length, isPublic),
                 cancellationToken);
             return CreatedAtAction(
                 nameof(FilesController.GetMetadata),

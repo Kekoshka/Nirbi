@@ -14,15 +14,15 @@ builder.Services.UsePostgreSql(builder.Configuration);
 builder.Services.ConfigureOptions(builder.Configuration);
 builder.Services.RegisterExecutingAsseblyServices();
 builder.Services.AddControllers();
-// Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddHttpContextAccessor();
+builder.Services.AddConfirmationDomainEvents();
+builder.Services.AddSingleton<IKafkaService, KafkaService>();
 
 var app = builder.Build();
 
-//app.UseExceptionHandling();
-// Configure the HTTP request pipeline.
+app.UseExceptionHandling();
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();

@@ -3,6 +3,8 @@ WORKDIR /src
 
 COPY ["MinorTaskService.WebApi/MinorTaskService.WebApi.csproj", "MinorTaskService.WebApi/"]
 COPY ["packages/", "/src/packages/"]
+COPY ["MinorTaskService.WebApi/MinorTaskService.WebApi.csproj", "MinorTaskService.WebApi/"]
+COPY ["MinorTaskService.DataAccess.Postgres/MinorTaskService.DataAccess.Postgres.csproj", "MinorTaskService.DataAccess.Postgres/"]
 
 RUN dotnet restore "MinorTaskService.WebApi/MinorTaskService.WebApi.csproj" \
     --source /src/packages \

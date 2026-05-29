@@ -18,4 +18,9 @@
         int NumberVolunteers,
         decimal Encouragement,
         Guid Images = default);
+
+    public class GetTaskNamesByIdsRequest
+    {
+        public List<Guid> Ids { get; set; } = [];
+    }
 }

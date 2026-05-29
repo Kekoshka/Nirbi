@@ -7,36 +7,97 @@ const ICONS = {
 
 const TITLES = { error: 'Ошибка', success: 'Успешно', info: 'Информация', warning: 'Предупреждение' };
 
-function show(type, message, duration = 4500) {
-  const container = document.getElementById('toast-container');
-  const toast = document.createElement('div');
-  toast.className = `toast toast-${type}`;
-  toast.innerHTML = `
+function escapeHtml(s) {
+  return String(s ?? '').replace(/[&<>"']/g, c => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+  }[c]));
+}
+
+function buildToast({ type, title, message, actions }) {
+  const el = document.createElement('div');
+  el.className = `toast toast-${type}${actions?.length ? ' toast-actionable' : ''}`;
+  const actionsHtml = actions?.length
+    ? `<div class="toast-actions">${actions.map((a, i) =>
+        `<button class="toast-action-btn toast-action-${a.variant || 'ghost'}" data-action-idx="${i}">${escapeHtml(a.label)}</button>`
+      ).join('')}</div>`
+    : '';
+
+  el.innerHTML = `
     <span class="toast-icon">${ICONS[type]}</span>
     <div class="toast-body">
-      <div class="toast-title">${TITLES[type]}</div>
-      <div class="toast-msg">${message}</div>
+      <div class="toast-title">${escapeHtml(title)}</div>
+      <div class="toast-msg">${message /* allow simple HTML like <strong> */}</div>
+      ${actionsHtml}
     </div>
     <button class="toast-close" aria-label="Закрыть">
       <svg viewBox="0 0 14 14" fill="none"><path d="M1 1l12 12M13 1L1 13" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
     </button>`;
+  return el;
+}
 
-  container.appendChild(toast);
+function showSimple(type, message, duration = 4500) {
+  return showAction({ type, title: TITLES[type], message, duration });
+}
+
+function showAction({ type = 'info', title = TITLES[type] || '', message = '', duration = 4500, actions = [] }) {
+  const container = document.getElementById('toast-container');
+  if (!container) return;
+
+  const el = buildToast({ type, title, message, actions });
+  container.appendChild(el);
+
+  let timer = null;
+  let dismissed = false;
 
   const dismiss = () => {
-    toast.classList.add('toast-out');
-    toast.addEventListener('animationend', () => toast.remove(), { once: true });
+    if (dismissed) return;
+    dismissed = true;
+    clearTimeout(timer);
+    el.classList.add('toast-out');
+    el.addEventListener('animationend', () => el.remove(), { once: true });
   };
 
-  toast.querySelector('.toast-close').addEventListener('click', dismiss);
-  const timer = setTimeout(dismiss, duration);
-  toast.addEventListener('mouseenter', () => clearTimeout(timer));
-  toast.addEventListener('mouseleave', () => setTimeout(dismiss, 1500));
+  el.querySelector('.toast-close').addEventListener('click', dismiss);
+
+  // Action buttons
+  if (actions?.length) {
+    el.querySelectorAll('.toast-action-btn').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const idx = Number(btn.dataset.actionIdx);
+        const action = actions[idx];
+        if (!action?.onClick) { dismiss(); return; }
+        // Disable all buttons to prevent double-click
+        el.querySelectorAll('.toast-action-btn').forEach(b => b.disabled = true);
+        try {
+          await action.onClick(dismiss);
+        } catch (e) {
+          console.error('Toast action handler failed:', e);
+        }
+        // If handler didn't dismiss, re-enable so user can try again
+        if (!dismissed) {
+          el.querySelectorAll('.toast-action-btn').forEach(b => b.disabled = false);
+        }
+      });
+    });
+  }
+
+  // Auto-dismiss only when duration > 0 and no actions (actionable toasts stay until clicked)
+  if (duration > 0 && !actions?.length) {
+    timer = setTimeout(dismiss, duration);
+    el.addEventListener('mouseenter', () => clearTimeout(timer));
+    el.addEventListener('mouseleave', () => { if (!dismissed) timer = setTimeout(dismiss, 1500); });
+  }
+
+  return { dismiss };
 }
 
 export const toast = {
-  error:   (msg, d) => show('error', msg, d),
-  success: (msg, d) => show('success', msg, d),
-  info:    (msg, d) => show('info', msg, d),
-  warning: (msg, d) => show('warning', msg, d),
+  error:   (msg, d) => showSimple('error',   msg, d),
+  success: (msg, d) => showSimple('success', msg, d),
+  info:    (msg, d) => showSimple('info',    msg, d),
+  warning: (msg, d) => showSimple('warning', msg, d),
+
+  // Toast with action buttons — does NOT auto-dismiss when actions are present.
+  // opts: { type, title, message, duration, actions: [{ label, variant, onClick(dismiss) }] }
+  action: (opts) => showAction(opts),
 };

@@ -27,7 +27,7 @@ public class MinorTasksController : ControllerBase
             request.Encouragement,
             request.Images);
         var id = await _mediator.Send(command, cancellationToken);
-        return CreatedAtAction(nameof(GetTask), new { minorTaskId = id }, id);
+        return Ok(id);
     }
 
     [HttpGet("tasks/{minorTaskId:guid}")]
@@ -35,6 +35,16 @@ public class MinorTasksController : ControllerBase
     {
         var minorTask = await _mediator.Send(new GetMinorTaskByIdQuery(minorTaskId), cancellationToken);
         return Ok(minorTask);
+    }
+
+    [HttpPost("tasks/names")]
+    public async Task<IActionResult> GetTaskNames(
+        [FromBody] GetTaskNamesByIdsRequest request,
+        CancellationToken cancellationToken)
+    {
+        var result = await _mediator.Send(
+            new GetTasksByIdsQuery(request.Ids ?? []), cancellationToken);
+        return Ok(result);
     }
 
     [HttpGet("tasks")]

@@ -1,6 +1,5 @@
 using GatewayService.WebApi.Common.DTO;
 using GatewayService.WebApi.Services;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace GatewayService.WebApi.Controllers;
@@ -35,10 +34,7 @@ public class MinorTasksController : ControllerBase
         return CreatedAtAction(nameof(GetTask), new { minorTaskId = result.Id }, result);
     }
 
-    /// <summary>
-    /// Получить список задач. Вместо FileCollectionId подставляется
-    /// URL первого изображения (PreviewImageUrl).
-    /// </summary>
+    /// <summary>Получить список задач — с превью первого изображения для каждой.</summary>
     [HttpGet]
     [ProducesResponseType(typeof(List<MinorTaskListItemResponse>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetTasks(
@@ -51,10 +47,7 @@ public class MinorTasksController : ControllerBase
         return Ok(result);
     }
 
-    /// <summary>
-    /// Получить задачу по ID. Вместо FileCollectionId подставляется
-    /// полный список изображений с метаданными и ссылками на скачивание.
-    /// </summary>
+    /// <summary>Получить задачу по ID — с полным списком изображений.</summary>
     [HttpGet("{minorTaskId:guid}")]
     [ProducesResponseType(typeof(MinorTaskDetailResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -67,5 +60,55 @@ public class MinorTasksController : ControllerBase
             return NotFound();
 
         return Ok(result);
+    }
+
+    /// <summary>Обновить поля задачи (название, описание, координаты и т.п.)</summary>
+    [HttpPatch("{minorTaskId:guid}")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> UpdateTask(
+        Guid minorTaskId,
+        [FromBody] UpdateMinorTaskGatewayRequest request)
+    {
+        var authHeader = Request.Headers.Authorization.ToString();
+        var statusCode = await _aggregator.UpdateTaskAsync(minorTaskId, request, authHeader);
+        return StatusCode((int)statusCode);
+    }
+
+    /// <summary>Изменить статус задачи.</summary>
+    [HttpPut("{minorTaskId:guid}")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> UpdateTaskStatus(
+        Guid minorTaskId,
+        [FromBody] UpdateMinorTaskStatusGatewayRequest request)
+    {
+        var authHeader = Request.Headers.Authorization.ToString();
+        var statusCode = await _aggregator.UpdateTaskStatusAsync(minorTaskId, request.StatusId, authHeader);
+        return StatusCode((int)statusCode);
+    }
+
+    /// <summary>Удалить задачу.</summary>
+    [HttpDelete("{minorTaskId:guid}")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> DeleteTask(Guid minorTaskId)
+    {
+        var authHeader = Request.Headers.Authorization.ToString();
+        var statusCode = await _aggregator.DeleteTaskAsync(minorTaskId, authHeader);
+        return StatusCode((int)statusCode);
+    }
+
+    /// <summary>Удалить участника из задачи.</summary>
+    [HttpDelete("{minorTaskId:guid}/participants/{participantId:guid}")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> DeleteTaskParticipant(Guid minorTaskId, Guid participantId)
+    {
+        var authHeader = Request.Headers.Authorization.ToString();
+        var statusCode = await _aggregator.DeleteTaskParticipantAsync(minorTaskId, participantId, authHeader);
+        return StatusCode((int)statusCode);
     }
 }

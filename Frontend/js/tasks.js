@@ -1,7 +1,12 @@
-import { toast }      from './toast.js';
-import { tokenStore }  from './tokenStore.js';
-import { authApi }     from './api.js';
-import { tasksApi }    from './tasksApi.js';
+import { toast }                              from './toast.js';
+import { tokenStore }                         from './tokenStore.js';
+import { authApi }                            from './api.js';
+import { tasksApi }                           from './tasksApi.js';
+import { dataApi }                            from './dataApi.js';
+import { confirmationsApi }                   from './confirmationsApi.js';
+import { startNotifications, onNotification } from './notifications.js';
+import { CONFIRMATION_TYPES,
+         CONFIRMATION_DEFAULT_EXPIRATION_HOURS } from './config.js';
 
 // ── Guard: redirect to login if no session ───────────────────────────────────
 if (!tokenStore.hasSession()) {
@@ -19,6 +24,15 @@ let detailMap   = null;
 let formMap     = null;
 let formMarker  = null;
 let mainMarkers = [];
+let removedImageIds = new Set();  // IDs картинок, помеченных на удаление в форме редактирования
+let editingTask    = null;         // полные данные задачи при редактировании (включая images)
+
+// Бэкенд использует статус "Created" как начальный, а не "Pending".
+// Нормализуем оба варианта — иначе кнопки действий не появятся.
+function isPending(status) {
+  const s = (status || '').toLowerCase();
+  return s === 'pending' || s === 'created';
+}
 
 const currentUserId = tokenStore.getUserId();
 
@@ -76,9 +90,49 @@ function formatReward(v) {
   return Number(v).toLocaleString('ru-RU', { style: 'currency', currency: 'RUB', maximumFractionDigits: 0 });
 }
 
-function isOwner(task) {
-  return task.consumerId && String(task.consumerId) === String(currentUserId);
+// Возможные имена поля владельца в ответе бэкенда — пробуем по очереди
+function getOwnerId(task) {
+  return task.consumerId ?? task.ownerId ?? task.creatorId
+      ?? task.userId     ?? task.organizerId ?? null;
 }
+
+function isOwner(task) {
+  const ownerId = getOwnerId(task);
+  return ownerId && String(ownerId) === String(currentUserId);
+}
+
+function ownerBadge(task) {
+  return isOwner(task) ? 'Вы' : 'Организатор';
+}
+
+// ── Image lightbox ──────────────────────────────────────────────────────────
+function openLightbox(src) {
+  const lb  = document.getElementById('image-lightbox');
+  const img = document.getElementById('lightbox-img');
+  if (!lb || !img) return;
+  img.src = src;
+  lb.hidden = false;
+  document.body.style.overflow = 'hidden';
+}
+function closeLightbox() {
+  const lb = document.getElementById('image-lightbox');
+  if (!lb) return;
+  lb.hidden = true;
+  document.body.style.overflow = '';
+}
+
+// Wire up close handlers once
+(() => {
+  const lb = document.getElementById('image-lightbox');
+  if (!lb) return;
+  document.getElementById('lightbox-close')?.addEventListener('click', closeLightbox);
+  lb.addEventListener('click', e => {
+    if (e.target === lb) closeLightbox();
+  });
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape' && !lb.hidden) closeLightbox();
+  });
+})();
 
 function setLoading(btnId, loading) {
   const btn = document.getElementById(btnId);
@@ -125,7 +179,8 @@ async function loadStatuses() {
     filterStatus.innerHTML = '<option value="">Все статусы</option>';
     statuses.forEach(s => {
       const opt = document.createElement('option');
-      opt.value = s.id;
+      // Фильтруем по имени статуса (t.status = строка), а не по UUID
+      opt.value = s.name;
       opt.textContent = s.name;
       filterStatus.appendChild(opt);
     });
@@ -160,9 +215,9 @@ function getFiltered() {
   const q = searchInput.value.trim().toLowerCase();
   if (q) tasks = tasks.filter(t => (t.name || '').toLowerCase().includes(q));
 
-  // status
+  // status — сравниваем строку t.status с именем статуса из select
   const sid = filterStatus.value;
-  if (sid) tasks = tasks.filter(t => String(t.statusId) === sid);
+  if (sid) tasks = tasks.filter(t => (t.status || '') === sid);
 
   // sort
   const sort = filterSort.value;
@@ -185,8 +240,15 @@ function renderTasks() {
   }
   emptyState.hidden = true;
 
-  tasksGrid.innerHTML = tasks.map((t, i) => `
-    <div class="task-card" data-id="${t.id}" style="animation-delay:${i * 30}ms">
+  tasksGrid.innerHTML = tasks.map((t, i) => {
+    // previewImageData: base64 строка (без префикса data:)
+    // previewImageContentType: image/jpeg, image/png ...
+    const preview = t.previewImageData
+      ? `<div class="card-preview"><img src="data:${t.previewImageContentType || 'image/jpeg'};base64,${t.previewImageData}" alt="" /></div>`
+      : '';
+    return `
+    <div class="task-card ${preview ? 'has-preview' : ''}" data-id="${t.id}" style="animation-delay:${i * 30}ms">
+      ${preview}
       <div class="card-top">
         <span class="card-title">${t.name || 'Без названия'}</span>
         <span class="status-badge ${statusClass(t.status)}">${statusLabel(t.status)}</span>
@@ -203,10 +265,12 @@ function renderTasks() {
             ${t.numberVolunteers || 0}
           </span>
         </div>
-        ${isOwner(t) ? '<span class="card-owner-badge">Моя задача</span>' : ''}
+        ${isOwner(t)
+          ? '<span class="card-owner-badge owner-self">Вы</span>'
+          : '<span class="card-owner-badge owner-other">Организатор</span>'}
       </div>
-    </div>
-  `).join('');
+    </div>`;
+  }).join('');
 
   // card click → detail
   tasksGrid.querySelectorAll('.task-card').forEach(card => {
@@ -216,19 +280,48 @@ function renderTasks() {
 
 // ── Detail Modal ──────────────────────────────────────────────────────────────
 async function openDetail(taskId) {
-  const task = allTasks.find(t => String(t.id) === String(taskId))
-    || await tasksApi.getById(taskId).catch(() => null);
+  // Список задач не содержит полный массив Images — всегда подгружаем детально.
+  // Если getById недоступен (например, сеть упала) — упадём на кэш из allTasks.
+  let task = null;
+  try {
+    task = await tasksApi.getById(taskId);
+  } catch {
+    task = allTasks.find(t => String(t.id) === String(taskId));
+  }
   if (!task) { toast.error('Задача не найдена'); return; }
 
   // populate header
   document.getElementById('detail-status-badge').textContent = statusLabel(task.status);
   document.getElementById('detail-title').textContent = task.name || 'Без названия';
   document.getElementById('detail-meta').innerHTML =
-    `<span>Волонтёров: ${task.numberVolunteers || 0}</span>
+    `<span>Организатор: <strong>${ownerBadge(task)}</strong></span>
+     <span>Волонтёров: ${task.numberVolunteers || 0}</span>
      <span>Вознаграждение: ${formatReward(task.encouragement)}</span>`;
 
   document.getElementById('detail-description').textContent =
     task.description || 'Описание отсутствует';
+
+  // Image gallery — MinorTaskDetailResponse.Images: FileMetadataDto[] с base64 в .data
+  const gallery = document.getElementById('detail-gallery');
+  const imgs = Array.isArray(task.images) ? task.images : [];
+  if (imgs.length) {
+    gallery.hidden = false;
+    gallery.innerHTML = imgs
+      .slice()
+      .sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0))
+      .map(img => {
+        if (!img.data) return '';
+        const ct = img.contentType || 'image/jpeg';
+        return `<img class="clickable-img" src="data:${ct};base64,${img.data}" alt="${img.originalFileName || ''}" />`;
+      }).join('');
+    // Bind click → lightbox
+    gallery.querySelectorAll('img.clickable-img').forEach(im => {
+      im.addEventListener('click', () => openLightbox(im.src));
+    });
+  } else {
+    gallery.hidden = true;
+    gallery.innerHTML = '';
+  }
 
   document.getElementById('detail-reward').textContent = formatReward(task.encouragement);
   document.getElementById('detail-volunteers').textContent = task.numberVolunteers || 0;
@@ -255,23 +348,83 @@ async function openDetail(taskId) {
       openModal(modalConfirm);
     });
   } else {
-    footer.innerHTML = `
-      <button class="btn-primary" id="detail-btn-join" style="width:auto;padding:0 2rem;">
-        <span class="btn-label">Записаться волонтёром</span>
-        <span class="btn-spinner" hidden></span>
-      </button>`;
-    document.getElementById('detail-btn-join').addEventListener('click', async () => {
-      setLoading('detail-btn-join', true);
-      try {
-        // join as participant — uses current user's id
-        toast.success('Вы записались волонтёром!');
-        closeModal(modalDetail);
-      } catch (e) {
-        toast.error(e.message);
-      } finally {
-        setLoading('detail-btn-join', false);
-      }
-    });
+    // Проверяем, не отправлял ли уже текущий пользователь заявку на эту задачу
+    const myApplication = confirmations.find(c =>
+      String(c.initiatorId) === String(currentUserId) &&
+      String(c.entityId)    === String(task.id)      &&
+      (c.confirmationType || '') === CONFIRMATION_TYPES.RESPOND_TO_MINOR_TASK
+    );
+    const status = (myApplication?.status || '').toLowerCase();
+
+    if (myApplication && isPending(myApplication.status)) {
+      // Ожидает решения — кнопка "Отозвать"
+      footer.innerHTML = `
+        <div class="detail-apply-info detail-apply-pending">
+          <svg viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="8.5" stroke="currentColor" stroke-width="1.5"/><path d="M10 6v4l3 2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+          <span>Вы уже откликнулись на задачу. Ожидайте ответа организатора.</span>
+        </div>
+        <button class="btn-outline-primary" id="detail-btn-revoke">
+          <span class="btn-label">Отозвать заявку</span>
+          <span class="btn-spinner" hidden></span>
+        </button>`;
+      document.getElementById('detail-btn-revoke').addEventListener('click', async () => {
+        setLoading('detail-btn-revoke', true);
+        try {
+          await confirmationsApi.revoke(myApplication.id, currentUserId);
+          toast.info('Заявка отозвана');
+          closeModal(modalDetail);
+          await loadConfirmations();
+        } catch (e) {
+          toast.error(e.message || 'Не удалось отозвать заявку');
+        } finally {
+          setLoading('detail-btn-revoke', false);
+        }
+      });
+    } else if (myApplication && status === 'accepted') {
+      footer.innerHTML = `
+        <div class="detail-apply-info detail-apply-accepted">
+          <svg viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="8.5" stroke="currentColor" stroke-width="1.5"/><path d="M6.5 10l2.5 2.5 4.5-4.5" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <span>Вы участвуете в этой задаче</span>
+        </div>`;
+    } else {
+      // Не подавал, либо предыдущая заявка отклонена/отозвана/истекла — можно подать новую
+      const wasRejected = myApplication && (status === 'rejected' || status === 'expired' || status === 'revoked');
+      footer.innerHTML = `
+        ${wasRejected ? `<div class="detail-apply-info detail-apply-rejected">
+          <span>Предыдущая заявка ${status === 'rejected' ? 'была отклонена' : status === 'expired' ? 'истекла' : 'была отозвана'}. Вы можете попробовать снова.</span>
+        </div>` : ''}
+        <button class="btn-primary" id="detail-btn-join" style="width:auto;padding:0 2rem;">
+          <span class="btn-label">Откликнуться на задачу</span>
+          <span class="btn-spinner" hidden></span>
+        </button>`;
+      document.getElementById('detail-btn-join').addEventListener('click', async () => {
+        const ownerId = getOwnerId(task);
+        if (!ownerId) {
+          toast.error('Не удалось определить организатора задачи');
+          return;
+        }
+        setLoading('detail-btn-join', true);
+        try {
+          await confirmationsApi.create({
+            confirmationType: CONFIRMATION_TYPES.RESPOND_TO_MINOR_TASK,
+            entityId:         task.id,
+            reviewerId:       ownerId,
+            expirationHours:  CONFIRMATION_DEFAULT_EXPIRATION_HOURS,
+            metaData: {
+              taskName:           task.name || '',
+              applicantUsername:  tokenStore.getUsername() || '',
+            },
+          });
+          toast.success('Заявка отправлена организатору');
+          closeModal(modalDetail);
+          await loadConfirmations();
+        } catch (e) {
+          toast.error(e.message || 'Не удалось отправить отклик');
+        } finally {
+          setLoading('detail-btn-join', false);
+        }
+      });
+    }
   }
 
   openModal(modalDetail);
@@ -290,7 +443,8 @@ async function openDetail(taskId) {
 
 // ── Create / Edit Form ────────────────────────────────────────────────────────
 function openForm(task = null) {
-  editingId = task ? task.id : null;
+  editingId   = task ? task.id : null;
+  editingTask = task ?? null;
   document.getElementById('form-modal-title').textContent = task ? 'Редактировать задачу' : 'Новая задача';
 
   // fill fields
@@ -300,6 +454,78 @@ function openForm(task = null) {
   document.getElementById('tf-reward').value     = task?.encouragement    || '';
   document.getElementById('tf-lat').value        = task?.latitude    || '';
   document.getElementById('tf-lng').value        = task?.longitude   || '';
+
+  // reset image input
+  const imgInput = document.getElementById('tf-images');
+  if (imgInput) { imgInput.value = ''; }
+  const imgPreview = document.getElementById('tf-images-preview');
+  if (imgPreview) imgPreview.innerHTML = '';
+  const uploadText = document.getElementById('file-upload-text');
+  if (uploadText) uploadText.textContent = 'Нажмите для выбора изображений';
+
+  // Reset list of images user wants removed
+  removedImageIds = new Set();
+
+  // Existing images — показываем только в режиме редактирования
+  const existingWrap = document.getElementById('tf-existing-wrap');
+  const existingImages = document.getElementById('tf-existing-images');
+  if (task && existingWrap && existingImages) {
+    // Если в переданной задаче уже есть массив images с base64 — используем сразу;
+    // иначе подгружаем через API (список задач не содержит полных images).
+    const renderExisting = (imgs) => {
+      const arr = Array.isArray(imgs) ? imgs.filter(i => i?.data) : [];
+      if (arr.length) {
+        existingWrap.hidden = false;
+        existingImages.innerHTML = arr
+          .slice()
+          .sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0))
+          .map(img => `
+            <div class="preview-img-wrap" data-file-id="${img.id}">
+              <img class="preview-img clickable-img" src="data:${img.contentType || 'image/jpeg'};base64,${img.data}" alt="${img.originalFileName || ''}" />
+              <button type="button" class="preview-img-remove" data-file-id="${img.id}" aria-label="Удалить">
+                <svg viewBox="0 0 14 14" fill="none"><path d="M1 1l12 12M13 1L1 13" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+              </button>
+            </div>`)
+          .join('');
+
+        // Wire up clicks: × → remove, image → lightbox
+        existingImages.querySelectorAll('.preview-img-remove').forEach(btn => {
+          btn.addEventListener('click', e => {
+            e.stopPropagation();
+            const id = btn.dataset.fileId;
+            removedImageIds.add(id);
+            btn.closest('.preview-img-wrap')?.remove();
+            if (!existingImages.querySelector('.preview-img-wrap')) {
+              existingWrap.hidden = true;
+            }
+          });
+        });
+        existingImages.querySelectorAll('img.clickable-img').forEach(im => {
+          im.addEventListener('click', () => openLightbox(im.src));
+        });
+      } else {
+        existingWrap.hidden = true;
+        existingImages.innerHTML = '';
+      }
+    };
+
+    if (Array.isArray(task.images) && task.images.some(i => i?.data)) {
+      renderExisting(task.images);
+    } else {
+      existingWrap.hidden = true;
+      existingImages.innerHTML = '';
+      // Подгружаем полные детали с картинками
+      tasksApi.getById(task.id).then(full => {
+        // Не перерисовываем, если форма уже закрыта или мы перешли к другой задаче
+        if (modalForm.hidden || editingId !== task.id) return;
+        editingTask = full;   // обновляем — теперь есть images[].fileCollectionId
+        renderExisting(full?.images);
+      }).catch(() => { /* молча — фото просто не покажутся */ });
+    }
+  } else if (existingWrap) {
+    existingWrap.hidden = true;
+    existingImages.innerHTML = '';
+  }
 
   // clear errors
   ['name','desc','volunteers','reward','coords'].forEach(f => {
@@ -332,6 +558,27 @@ function openForm(task = null) {
     });
   }, 80);
 }
+
+// ── Image upload preview ─────────────────────────────────────────────────────
+document.getElementById('tf-images').addEventListener('change', function () {
+  const preview = document.getElementById('tf-images-preview');
+  const label   = document.getElementById('file-upload-text');
+  const files   = Array.from(this.files).slice(0, 5);
+  preview.innerHTML = '';
+  if (files.length) {
+    label.textContent = `Выбрано файлов: ${files.length}`;
+    files.forEach(file => {
+      const url = URL.createObjectURL(file);
+      const img = document.createElement('img');
+      img.src = url;
+      img.className = 'preview-img';
+      img.onload = () => URL.revokeObjectURL(url);
+      preview.appendChild(img);
+    });
+  } else {
+    label.textContent = 'Нажмите для выбора изображений';
+  }
+});
 
 function updateFormCoords({ lat, lng }) {
   document.getElementById('tf-lat').value = lat.toFixed(6);
@@ -391,9 +638,39 @@ document.getElementById('task-form').addEventListener('submit', async e => {
 
     if (editingId) {
       await tasksApi.update(editingId, payload);
+
+      // Загружаем новые изображения в существующую коллекцию
+      const imageInput = document.getElementById('tf-images');
+      const newImages  = imageInput ? Array.from(imageInput.files) : [];
+      if (newImages.length) {
+        // fileCollectionId берём из первого изображения (все в одной коллекции)
+        const collectionId = editingTask?.images?.[0]?.fileCollectionId
+                          ?? editingTask?.fileCollectionId;
+        if (collectionId) {
+          const uploadResults = await Promise.allSettled(
+            newImages.map(f => dataApi.uploadToCollection(collectionId, f))
+          );
+          const failed = uploadResults.filter(r => r.status === 'rejected').length;
+          if (failed) toast.warning(`${failed} из ${newImages.length} изображений не удалось загрузить`);
+        } else {
+          toast.warning('Не удалось добавить изображения: коллекция не определена. Попробуйте пересоздать задачу.');
+        }
+      }
+
+      // Удаляем картинки, помеченные ×
+      if (removedImageIds.size) {
+        const ids = [...removedImageIds];
+        const results = await Promise.allSettled(ids.map(id => dataApi.deleteFile(id)));
+        const failed = results.filter(r => r.status === 'rejected').length;
+        if (failed) toast.warning(`Часть изображений (${failed}) не удалось удалить`);
+        removedImageIds.clear();
+      }
+
       toast.success('Задача обновлена');
     } else {
-      await tasksApi.create(payload);
+      const imageInput = document.getElementById('tf-images');
+      const images = imageInput ? Array.from(imageInput.files) : [];
+      await tasksApi.create(payload, images);
       toast.success('Задача создана');
     }
 
@@ -471,7 +748,289 @@ document.getElementById('btn-logout').addEventListener('click', async () => {
   window.location.href = 'index.html#login';
 });
 
-// ── Boot ──────────────────────────────────────────────────────────────────────
+// ── Notifications panel ──────────────────────────────────────────────────────
+const notifBtn    = document.getElementById('btn-notifications');
+const notifPanel  = document.getElementById('notif-panel');
+const notifList   = document.getElementById('notif-list');
+const notifBadge  = document.getElementById('notif-badge');
+const notifClear  = document.getElementById('btn-notif-clear');
+
+let confirmations = [];   // unified list: incoming + outgoing
+let dismissedIds  = new Set(JSON.parse(localStorage.getItem('nirbi_dismissed_confirmations') || '[]'));
+
+function saveDismissed() {
+  localStorage.setItem('nirbi_dismissed_confirmations', JSON.stringify([...dismissedIds]));
+}
+
+function unreadCount() {
+  return confirmations.filter(c => {
+    if (dismissedIds.has(c.id)) return false;
+    // Только входящие (где я reviewer) — это то, что требует моей реакции
+    if (String(c.reviewerId) !== String(currentUserId)) return false;
+    const status = (c.status || '').toLowerCase();
+    return isPending(c.status);
+  }).length;
+}
+
+function refreshBadge() {
+  const n = unreadCount();
+  if (n > 0) {
+    notifBadge.hidden = false;
+    notifBadge.textContent = n > 99 ? '99+' : String(n);
+  } else {
+    notifBadge.hidden = true;
+  }
+}
+
+function formatNotifDate(d) {
+  try {
+    return new Date(d).toLocaleString('ru-RU', {
+      day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit',
+    });
+  } catch { return ''; }
+}
+
+function renderNotifications() {
+  if (!confirmations.length) {
+    notifList.innerHTML = '<div class="notif-empty">Нет уведомлений</div>';
+    refreshBadge();
+    return;
+  }
+
+  // В панели — только то, где я reviewer (входящие заявки на МОИ задачи).
+  // Свои отправленные/полученные ответы пользователь смотрит на /confirmations.html
+  const incoming = confirmations.filter(c => String(c.reviewerId) === String(currentUserId));
+
+  if (!incoming.length) {
+    notifList.innerHTML = '<div class="notif-empty">Нет уведомлений</div>';
+    refreshBadge();
+    return;
+  }
+
+  // Сортируем новые сверху
+  const sorted = [...incoming].sort((a, b) =>
+    new Date(b.createdAt || 0) - new Date(a.createdAt || 0)
+  );
+
+  notifList.innerHTML = sorted.map(c => {
+    const status    = (c.status || '').toLowerCase();
+    const taskName  = c.metaData?.taskName || 'задача';
+    const applicant = c.metaData?.applicantUsername || '';
+
+    let title = '';
+    let body  = '';
+    let actions = '';
+
+    if (isPending(c.status)) {
+      title = 'Новая заявка на участие';
+      body  = `${applicant ? `<strong>${applicant}</strong> хочет` : 'Кто-то хочет'} присоединиться к задаче «${taskName}»`;
+      actions = `
+        <button class="notif-btn notif-btn-accept" data-action="accept" data-id="${c.id}">Принять</button>
+        <button class="notif-btn notif-btn-reject" data-action="reject" data-id="${c.id}">Отклонить</button>`;
+    } else if (status === 'revoked') {
+      title = 'Отклик отозван';
+      body  = `${applicant ? `<strong>${applicant}</strong> отозвал` : 'Пользователь отозвал'} заявку на «${taskName}»`;
+    } else if (status === 'accepted') {
+      title = 'Вы приняли заявку';
+      body  = `${applicant ? `<strong>${applicant}</strong> — задача` : 'Задача'} «${taskName}»`;
+    } else if (status === 'rejected') {
+      title = 'Вы отклонили заявку';
+      body  = `Задача «${taskName}»`;
+    } else if (status === 'expired') {
+      title = 'Заявка истекла';
+      body  = `Без ответа по задаче «${taskName}»`;
+    } else {
+      title = c.status || 'Заявка';
+      body  = `По задаче «${taskName}»`;
+    }
+
+    const dismissedClass = dismissedIds.has(c.id) ? 'notif-item-dismissed' : '';
+    return `
+      <div class="notif-item ${dismissedClass}" data-id="${c.id}">
+        <div class="notif-item-head">
+          <span class="notif-item-title">${title}</span>
+          <span class="notif-item-date">${formatNotifDate(c.createdAt)}</span>
+        </div>
+        <div class="notif-item-body">${body}</div>
+        ${actions ? `<div class="notif-item-actions">${actions}</div>` : ''}
+      </div>`;
+  }).join('');
+
+  // Click handlers for action buttons
+  notifList.querySelectorAll('.notif-btn').forEach(b => {
+    b.addEventListener('click', async ev => {
+      ev.stopPropagation();
+      const id     = b.dataset.id;
+      const action = b.dataset.action;
+      b.disabled = true;
+      try {
+        if (action === 'accept') {
+          await confirmationsApi.respond(id, true);
+          toast.success('Заявка принята');
+        } else if (action === 'reject') {
+          await confirmationsApi.respond(id, false, 'Отклонено организатором');
+          toast.info('Заявка отклонена');
+        } else if (action === 'revoke') {
+          await confirmationsApi.revoke(id, currentUserId);
+          toast.info('Заявка отозвана');
+        }
+        await loadConfirmations();
+      } catch (e) {
+        toast.error(e.message || 'Ошибка операции');
+      } finally {
+        b.disabled = false;
+      }
+    });
+  });
+
+  refreshBadge();
+}
+
+async function loadConfirmations() {
+  if (!currentUserId) return;
+  try {
+    // Параллельно: incoming + outgoing
+    const [incoming, outgoing] = await Promise.all([
+      confirmationsApi.getByReviewer(currentUserId).catch(() => []),
+      confirmationsApi.getByInitiator(currentUserId).catch(() => []),
+    ]);
+    const inc = Array.isArray(incoming) ? incoming : [];
+    const out = Array.isArray(outgoing) ? outgoing : [];
+
+    // Объединяем + дедуп по id
+    const seen = new Set();
+    confirmations = [...inc, ...out].filter(c => {
+      if (!c?.id || seen.has(c.id)) return false;
+      seen.add(c.id);
+      // оставляем только нужный тип
+      const t = c.confirmationType || '';
+      return !t || t === CONFIRMATION_TYPES.RESPOND_TO_MINOR_TASK;
+    });
+
+    renderNotifications();
+  } catch (e) {
+    console.error('Failed to load confirmations:', e);
+  }
+}
+
+// Toggle panel
+notifBtn.addEventListener('click', e => {
+  e.stopPropagation();
+  notifPanel.hidden = !notifPanel.hidden;
+});
+document.addEventListener('click', e => {
+  if (!notifPanel.hidden && !notifPanel.contains(e.target) && !notifBtn.contains(e.target)) {
+    notifPanel.hidden = true;
+  }
+});
+
+// Mark all as dismissed
+notifClear.addEventListener('click', () => {
+  confirmations.forEach(c => dismissedIds.add(c.id));
+  saveDismissed();
+  renderNotifications();
+});
+
+// ── SignalR realtime hooks ────────────────────────────────────────────────────
+function handleIncomingConfirmation(payload) {
+  const taskName  = payload?.metaData?.taskName          || 'задаче';
+  const applicant = payload?.metaData?.applicantUsername || 'Кто-то';
+  const cId       = payload?.id;
+
+  // Оптимистичное обновление локального состояния, чтобы панель тоже подхватила
+  if (cId) {
+    const idx = confirmations.findIndex(c => c.id === cId);
+    if (idx >= 0) confirmations[idx] = { ...confirmations[idx], ...payload };
+    else          confirmations.push(payload);
+    renderNotifications();
+  }
+
+  // Actionable toast с кнопками Принять / Отклонить прямо в уведомлении
+  if (cId) {
+    toast.action({
+      type:     'info',
+      title:    'Новая заявка на участие',
+      message:  `<strong>${applicant}</strong> хочет присоединиться к «${taskName}»`,
+      duration: 0,  // не закрывать автоматически
+      actions: [
+        {
+          label:   'Принять',
+          variant: 'success',
+          onClick: async dismiss => {
+            try {
+              await confirmationsApi.respond(cId, true);
+              toast.success('Заявка принята');
+              await loadConfirmations();
+              dismiss();
+            } catch (e) {
+              toast.error(e.message || 'Не удалось принять заявку');
+            }
+          },
+        },
+        {
+          label:   'Отклонить',
+          variant: 'danger',
+          onClick: async dismiss => {
+            try {
+              await confirmationsApi.respond(cId, false, 'Отклонено организатором');
+              toast.info('Заявка отклонена');
+              await loadConfirmations();
+              dismiss();
+            } catch (e) {
+              toast.error(e.message || 'Не удалось отклонить заявку');
+            }
+          },
+        },
+      ],
+    });
+  } else {
+    // Без id — просто инфо-toast
+    toast.info(`Новый отклик${applicant ? ` от ${applicant}` : ''}${taskName ? ` на «${taskName}»` : ''}`);
+  }
+
+  // Фоновая синхронизация (на случай если бэк ещё не успел закоммитить на момент SignalR)
+  setTimeout(loadConfirmations, 500);
+}
+
+function handleConfirmationRespond(payload) {
+  const status   = (payload?.status || '').toLowerCase();
+  const taskName = payload?.metaData?.taskName || '';
+  if (status === 'accepted') {
+    toast.success(`Ваша заявка принята${taskName ? ` («${taskName}»)` : ''}`);
+  } else if (status === 'rejected') {
+    toast.warning(`Ваша заявка отклонена${taskName ? ` («${taskName}»)` : ''}`);
+  } else {
+    toast.info('Заявка обновлена');
+  }
+  loadConfirmations();
+}
+
+function handleConfirmationRevoked(payload) {
+  const taskName  = payload?.metaData?.taskName          || '';
+  const applicant = payload?.metaData?.applicantUsername || '';
+  toast.info(
+    `${applicant ? applicant : 'Пользователь'} отозвал заявку${taskName ? ` на «${taskName}»` : ''}`
+  );
+  loadConfirmations();
+}
+
+onNotification('ShowConfirmationCreated',  handleIncomingConfirmation);
+onNotification('ShowConfirmationRespond',  handleConfirmationRespond);
+onNotification('ShowConfirmationRevoked',  handleConfirmationRevoked);
+
+// ── Boot ─────────────────────────────────────────────────────────────────────
 initMainMap();
 loadStatuses();
 loadTasks();
+loadConfirmations();
+startNotifications();
+
+// Если пришли со страницы подтверждений — сразу открываем нужную задачу
+const _urlParams = new URLSearchParams(window.location.search);
+const _openTaskId = _urlParams.get('openTask');
+if (_openTaskId) {
+  // Убираем параметр из URL, чтобы не открывалось при перезагрузке
+  history.replaceState({}, '', window.location.pathname);
+  // openDetail сам загрузит задачу через getById — не ждём loadTasks()
+  openDetail(_openTaskId);
+}
