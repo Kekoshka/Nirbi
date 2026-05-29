@@ -1,13 +1,16 @@
-﻿using AuthService.WebApi.API.Responses;
+﻿using System.IdentityModel.Tokens.Jwt;
+using System.Net;
+using System.Threading;
+using AuthService.WebApi.API.Responses;
 using AuthService.WebApi.Configuration;
 using AuthService.WebApi.External.Keycloak;
 using AuthService.WebApi.External.Keycloak.Models;
+using AuthService.WebApi.Utilities;
 using ExceptionHandler.Exceptions;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Options;
 using Refit;
-using System.IdentityModel.Tokens.Jwt;
-using System.Net;
+using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace AuthService.WebApi.Domain.Services;
 
@@ -112,6 +115,53 @@ public class KeycloakIntegrationService : IKeycloakIntegrationService
         return await LoginAsync(email, password, cancellationToken);
     }
 
+    public async Task<bool> UpdateUser(UpdateUserRequest data,
+    CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var user = await GetUserInfo(data.Id, cancellationToken);
+            if (user == null)
+            {
+                throw new Exception($"User with id '{data.Id}' not found.");
+            }
+            if (data.CurrentPassword == null)
+            {
+                throw new Exception("Current password parameter is required.");
+            }
+            if (!string.IsNullOrEmpty(data.CurrentPassword))
+            {
+                var isValid = await VerifyUserPasswordAsync(user.Email, data.CurrentPassword, cancellationToken);
+                if (!isValid)
+                    throw new Exception("Current password is incorrect.");
+            }
+
+            KeycloakUserDto dto = KeycloakUserExtensions.ToKeycloakRequest(data, data.CurrentPassword);
+            if (!string.IsNullOrEmpty(data.NewPassword))
+            {
+                dto.Credentials = new[]
+                {
+                new KeycloakCredential
+                {
+                    Type = "password",
+                    Value = data.NewPassword,
+                    Temporary = false
+                }
+            };
+            }
+            var adminToken = await GetAdminTokenAsync(cancellationToken);
+            await _keycloakClient.UpdateUserAsync(_keycloakOptions.Realm, data.Id, $"Bearer {adminToken}", dto, cancellationToken);
+        }
+        catch (ApiException ex)
+        {
+            var content = await ex.GetContentAsAsync<object>();
+            Console.WriteLine("Keycloak error:" + content);
+            throw;
+        }
+        
+        return true;
+    }
+
     public async Task<AuthResponseDto> RefreshTokenAsync(
         string refreshToken,
         CancellationToken cancellationToken = default)
@@ -188,6 +238,26 @@ public class KeycloakIntegrationService : IKeycloakIntegrationService
 
 
     // ── helpers ───────────────────────────────────────────────────────────────
+
+    public async Task<bool> VerifyUserPasswordAsync(string username, string password, CancellationToken ct)
+    {
+        var parameters = new Dictionary<string, string>
+        {
+            ["grant_type"] = "password",
+            ["client_id"] = _keycloakOptions.PublicClientId,
+            ["username"] = username,
+            ["password"] = password
+        };
+        try
+        {
+            var token = await _keycloakClient.GetTokenAsync(_keycloakOptions.Realm, parameters, ct);
+            return !string.IsNullOrEmpty(token?.AccessToken);
+        }
+        catch (ApiException ex) when (ex.StatusCode == HttpStatusCode.Unauthorized)
+        {
+            return false;
+        }
+    }
 
     public async Task<KeycloakUserDto> GetUserInfo(string id, CancellationToken cancellationToken = default)
     {

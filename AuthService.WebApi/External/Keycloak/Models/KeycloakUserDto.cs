@@ -130,6 +130,12 @@ namespace AuthService.WebApi.External.Keycloak.Models
         public string? EducationField { get; set; }
     }
 
+    public class UpdateUserRequest : UserProfile
+    {
+        public string? CurrentPassword { get; set; }
+        public string? NewPassword { get; set; }
+    }
+
     public class KeycloakCredential
     {
         [JsonPropertyName("type")]

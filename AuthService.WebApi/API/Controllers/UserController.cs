@@ -1,6 +1,10 @@
-﻿using AuthService.WebApi.Domain.Services;
+﻿using System.Linq;
+using AuthService.WebApi.Configuration;
+using AuthService.WebApi.Domain.Services;
 using AuthService.WebApi.External.Keycloak;
 using AuthService.WebApi.External.Keycloak.Models;
+using AuthService.WebApi.Utilities;
+using ExceptionHandler.Exceptions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -11,9 +15,13 @@ namespace AuthService.WebApi.API.Controllers;
 public class UsersController : ControllerBase
 {
     private readonly IKeycloakIntegrationService _keycloakService;
+    private readonly PasswordHasher _passwordHasher;
 
-    public UsersController(IKeycloakIntegrationService keycloakService)
-        => _keycloakService = keycloakService;
+    public UsersController(IKeycloakIntegrationService keycloakService, PasswordHasher passwordHasher)
+    {
+        _keycloakService = keycloakService;
+        _passwordHasher = passwordHasher;
+    }
 
     /// <summary>
     /// Поиск пользователей по username (частичное совпадение поддерживается Keycloak)
@@ -58,6 +66,30 @@ public class UsersController : ControllerBase
         }
 
         var response = KeycloakUserExtensions.ToUserProfile(user);
+
+        return Ok(response);
+    }
+
+    /// <summary>
+    /// Изменение информации о пользователе по ID
+    /// </summary>
+    [HttpPut("users/{id}")]
+    public async Task<IActionResult> UpdateUserById(
+        string id, [FromBody] UpdateUserRequest data, 
+        CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(id))
+        {
+            return BadRequest("Id parameter is required.");
+        }
+
+        if (!Guid.TryParseExact(id, "D", out _))
+        {
+            return BadRequest("Id must be a valid GUID in format xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx");
+        }
+        data.Id = id;
+
+        var response = await _keycloakService.UpdateUser(data, cancellationToken);
 
         return Ok(response);
     }
