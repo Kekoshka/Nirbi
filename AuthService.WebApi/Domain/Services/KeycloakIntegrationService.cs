@@ -30,53 +30,86 @@ public class KeycloakIntegrationService : IKeycloakIntegrationService
     }
 
     public async Task<AuthResponseDto> LoginAsync(
-        string username, string password,
-        CancellationToken cancellationToken = default)
+    string emailOrPhone, string password,
+    CancellationToken cancellationToken = default)
     {
+        string username;
+
+        if (emailOrPhone.Contains("@"))
+        {
+            username = emailOrPhone;
+        }
+        else
+        {
+            var adminToken = await GetAdminTokenAsync(cancellationToken);
+            var users = await _keycloakClient.SearchUsersByPhoneAsync(
+                _keycloakOptions.Realm,
+                $"Bearer {adminToken}",
+                $"phone:{emailOrPhone}",
+                cancellationToken);
+
+            var user = users?.FirstOrDefault();
+            if (user == null)
+            {
+                throw new Exception("Пользователь с таким телефоном не найден");
+            }
+
+            username = user.Email ?? user.Username;
+            if (string.IsNullOrEmpty(username))
+            {
+                throw new Exception("У пользователя не указан email или username");
+            }
+        }
+
         var parameters = new Dictionary<string, string>
         {
-            { "grant_type", "password" },
-            { "client_id", _keycloakOptions.PublicClientId },
-            { "username", username },
-            { "password", password }
+            ["grant_type"] = "password",
+            ["client_id"] = _keycloakOptions.PublicClientId,
+            ["username"] = username,
+            ["password"] = password
         };
 
         var response = await _keycloakClient.GetTokenAsync(
-            _keycloakOptions.Realm, parameters, cancellationToken);
+            _keycloakOptions.Realm,
+            parameters,
+            cancellationToken);
 
-        return ToAuthResponse(response);
+        return await ToAuthResponse(response, cancellationToken);
     }
 
     public async Task<AuthResponseDto> RegisterAsync(
-        string username, string email, string password,
-        CancellationToken cancellationToken = default)
+    string FName, string SName, string LName, string phone, string email, string password,
+    CancellationToken cancellationToken = default)
     {
         var adminToken = await GetAdminTokenAsync(cancellationToken);
 
-        var user = new KeycloakUserDto
+        var userProfile = new UserProfile
         {
-            Username = username,
-            Email = email,
-            Enabled = true,
-            Credentials = new[]
-            {
-                new KeycloakCredential { Type = "password", Value = password, Temporary = false }
-            }
+            FirstName = FName,
+            SecondName = SName,
+            LastName = LName,
+            Phone = phone,
+            Email = email
         };
+
+        var keycloakUser = userProfile.ToKeycloakRequest(password, emailAsUsername: true);
 
         try
         {
             await _keycloakClient.CreateUserAsync(
-                _keycloakOptions.Realm, $"Bearer {adminToken}", user, cancellationToken);
+                _keycloakOptions.Realm,
+                $"Bearer {adminToken}",
+                keycloakUser,
+                cancellationToken);
         }
         catch (ApiException ex)
         {
             var content = await ex.GetContentAsAsync<object>();
-            Console.Write("Keycloak error:" + content);
+            Console.WriteLine("Keycloak error:" + content);
             throw;
         }
 
-        return await LoginAsync(username, password, cancellationToken);
+        return await LoginAsync(email, password, cancellationToken);
     }
 
     public async Task<AuthResponseDto> RefreshTokenAsync(
@@ -93,7 +126,7 @@ public class KeycloakIntegrationService : IKeycloakIntegrationService
         var response = await _keycloakClient.GetTokenAsync(
             _keycloakOptions.Realm, parameters, cancellationToken);
 
-        return ToAuthResponse(response);
+        return await ToAuthResponse(response, cancellationToken);
     }
 
     public async Task LogoutAsync(string refreshToken, CancellationToken cancellationToken = default)
@@ -127,17 +160,17 @@ public class KeycloakIntegrationService : IKeycloakIntegrationService
     }
 
     public async Task<IEnumerable<UserSearchResultDto>> SearchUsersByUsernameAsync(
-        string username,
+        string email,
         CancellationToken cancellationToken = default)
     {
         var adminToken = await GetAdminTokenAsync(cancellationToken);
 
-        var users = await _keycloakClient.SearchUsersByUsernameAsync(
-            _keycloakOptions.Realm, $"Bearer {adminToken}", username, cancellationToken);
+        var users = await _keycloakClient.SearchUsersByEmailAsync(
+            _keycloakOptions.Realm, $"Bearer {adminToken}", email, cancellationToken);
 
         return users
             .Where(u => u.Id is not null)
-            .Select(u => new UserSearchResultDto(Guid.Parse(u.Id), u.Username));
+            .Select(u => new UserSearchResultDto(Guid.Parse(u.Id), u.Email));
     }
 
     public async Task<UserSearchResultDto?> GetUserByIdAsync(
@@ -156,10 +189,18 @@ public class KeycloakIntegrationService : IKeycloakIntegrationService
 
     // ── helpers ───────────────────────────────────────────────────────────────
 
+    public async Task<KeycloakUserDto> GetUserInfo(string id, CancellationToken cancellationToken = default)
+    {
+        var adminToken = await GetAdminTokenAsync(cancellationToken);
+        var userInfo = await _keycloakClient.GetUserByIdAsync(_keycloakOptions.Realm, id, $"Bearer {adminToken}", cancellationToken);
+        userInfo.Credentials = null;
+        return userInfo;
+    }
+
     /// <summary>
     /// Извлекает UserId (claim "sub") из AccessToken без лишнего запроса к Keycloak.
     /// </summary>
-    private static AuthResponseDto ToAuthResponse(KeycloakTokenResponse response)
+    private async Task<AuthResponseDto> ToAuthResponse(KeycloakTokenResponse response, CancellationToken cancellationToken = default)
     {
         var handler = new JwtSecurityTokenHandler();
         var jwt = handler.ReadJwtToken(response.AccessToken);

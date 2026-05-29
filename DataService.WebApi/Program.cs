@@ -13,6 +13,7 @@ builder.Services.AddHttpContextAccessor();
 builder.Services.AddNirbiServiceAuth(builder.Configuration);
 
 //builder.Services.AddDataServiceJwtAuthentication(builder.Configuration);
+builder.Services.AddHostedService<HostedBase>();
 builder.Services.UsePostgreSql(builder.Configuration);
 builder.Services.AddS3ObjectStorage(builder.Configuration);
 builder.Services.AddDataServices();

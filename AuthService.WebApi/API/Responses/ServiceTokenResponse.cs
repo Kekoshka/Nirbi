@@ -1,4 +1,6 @@
-﻿namespace AuthService.WebApi.API.Responses
+﻿using AuthService.WebApi.External.Keycloak.Models;
+
+namespace AuthService.WebApi.API.Responses
 {
     public class ServiceTokenResponse
     {
@@ -38,11 +40,11 @@
         public int ExpiresIn { get; set; }
     }
     public record AuthResponseDto(
-    Guid UserId,
-    string AccessToken,
-    string RefreshToken,
-    string TokenType,
-    int ExpiresIn);
+        Guid UserId,
+        string AccessToken,
+        string RefreshToken,
+        string TokenType,
+        int ExpiresIn);
 
     public record UserSearchResultDto(
         Guid UserId,

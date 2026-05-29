@@ -19,7 +19,7 @@ namespace AuthService.WebApi.Extensions
             services.Configure<ServiceTokenOptions>(configuration.GetSection(ServiceTokenOptions.Section));
             services.Configure<ServiceRegistryOptions>(configuration.GetSection(ServiceRegistryOptions.Section));
 
-            services.AddHostedService<ServiceRegistryInitializer>();
+            //services.AddHostedService<ServiceRegistryInitializer>();
 
             // Data Access
             services.AddDataAccess(configuration);

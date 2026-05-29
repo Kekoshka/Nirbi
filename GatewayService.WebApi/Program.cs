@@ -41,6 +41,7 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 //Auth
+builder.Services.AddHostedService<HostedBase>();
 builder.Services.AddNirbiServiceAuth(builder.Configuration);
 builder.Services.AddAuthorization(options =>
 {

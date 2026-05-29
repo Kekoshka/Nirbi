@@ -7,6 +7,8 @@ using Nirbi.ServiceAuth.Extensions;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Add services to the container.
+builder.Services.AddHostedService<HostedBase>();
 builder.Services.AddNirbiServiceAuth(builder.Configuration);
 builder.Services.UsePostgreSql(builder.Configuration);
 builder.Services.ConfigureOptions(builder.Configuration);
