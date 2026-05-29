@@ -9,13 +9,12 @@ ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
 
 COPY ["packages/", "/src/packages/"]
+COPY ["GatewayService.WebApi/GatewayService.WebApi.csproj", "GatewayService.WebApi/"]
 
 RUN dotnet restore "GatewayService.WebApi/GatewayService.WebApi.csproj" \
     --source /src/packages \
     --source https://api.nuget.org/v3/index.json
 
-COPY ["GatewayService.WebApi/GatewayService.WebApi.csproj", "GatewayService.WebApi/"]
-RUN dotnet restore "./GatewayService.WebApi/GatewayService.WebApi.csproj"
 COPY . .
 WORKDIR "/src/GatewayService.WebApi"
 RUN dotnet build "./GatewayService.WebApi.csproj" -c $BUILD_CONFIGURATION -o /app/build
