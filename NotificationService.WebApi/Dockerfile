@@ -1,6 +1,7 @@
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 WORKDIR /src
 
+COPY ["NotificationService.WebApi/NotificationService.WebApi.csproj", "NotificationService.WebApi/"]
 COPY ["packages/", "/src/packages/"]
 
 RUN dotnet restore "NotificationService.WebApi/NotificationService.WebApi.csproj" \
@@ -8,6 +9,7 @@ RUN dotnet restore "NotificationService.WebApi/NotificationService.WebApi.csproj
     --source https://api.nuget.org/v3/index.json
 
 COPY . .
+
 WORKDIR "/src/NotificationService.WebApi"
 RUN dotnet publish "NotificationService.WebApi.csproj" -c Release -o /out /p:UseAppHost=false
 

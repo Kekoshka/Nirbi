@@ -179,7 +179,7 @@ public class KeycloakIntegrationService : IKeycloakIntegrationService
     {
         var adminToken = await GetAdminTokenAsync(cancellationToken);
         var user = await _keycloakClient.GetUserByIdAsync(
-            _keycloakOptions.Realm, userId, $"Bearer {adminToken}", cancellationToken);
+            _keycloakOptions.Realm, userId.ToString(), $"Bearer {adminToken}", cancellationToken);
 
         if (user?.Id is null)
             throw new NotFoundException($"User with id {userId} not found");
