@@ -9,12 +9,13 @@ ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
 
 COPY ["packages/", "/src/packages/"]
+COPY ["MinorTaskService.WebApi/MinorTaskService.WebApi.csproj", "MinorTaskService.WebApi/"]
+COPY ["MinorTaskService.DataAccess.Postgres/MinorTaskService.DataAccess.Postgres.csproj", "MinorTaskService.DataAccess.Postgres/"]
 
 RUN dotnet restore "MinorTaskService.WebApi/MinorTaskService.WebApi.csproj" \
     --source /src/packages \
     --source https://api.nuget.org/v3/index.json
 
-COPY ["MinorTaskService.WebApi/MinorTaskService.WebApi.csproj", "MinorTaskService.WebApi/"]
 RUN dotnet restore "./MinorTaskService.WebApi/MinorTaskService.WebApi.csproj"
 COPY . .
 WORKDIR "/src/MinorTaskService.WebApi"
