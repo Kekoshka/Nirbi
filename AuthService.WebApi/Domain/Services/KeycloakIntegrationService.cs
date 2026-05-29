@@ -115,42 +115,35 @@ public class KeycloakIntegrationService : IKeycloakIntegrationService
         return await LoginAsync(email, password, cancellationToken);
     }
 
-    public async Task<bool> UpdateUser(UpdateUserRequest data,
-    CancellationToken cancellationToken = default)
+    public async Task<bool> UpdateUser(UpdateUserRequest data, CancellationToken cancellationToken = default)
     {
         try
         {
-            var user = await GetUserInfo(data.Id, cancellationToken);
-            if (user == null)
-            {
-                throw new Exception($"User with id '{data.Id}' not found.");
-            }
-            if (data.CurrentPassword == null)
-            {
-                throw new Exception("Current password parameter is required.");
-            }
-            if (!string.IsNullOrEmpty(data.CurrentPassword))
-            {
-                var isValid = await VerifyUserPasswordAsync(user.Email, data.CurrentPassword, cancellationToken);
-                if (!isValid)
-                    throw new Exception("Current password is incorrect.");
-            }
+            var existing = await GetUserInfo(data.Id, cancellationToken);
+            if (existing == null)
+                throw new NotFoundException($"User with id '{data.Id}' not found.");
 
-            KeycloakUserDto dto = KeycloakUserExtensions.ToKeycloakRequest(data, data.CurrentPassword);
-            if (!string.IsNullOrEmpty(data.NewPassword))
-            {
-                dto.Credentials = new[]
-                {
-                new KeycloakCredential
-                {
-                    Type = "password",
-                    Value = data.NewPassword,
-                    Temporary = false
-                }
-            };
-            }
+            if (string.IsNullOrEmpty(data.CurrentPassword))
+                throw new Exception("Current password parameter is required.");
+
+            var isValid = await VerifyUserPasswordAsync(
+                existing.Email ?? existing.Username,
+                data.CurrentPassword,
+                cancellationToken);
+            if (!isValid)
+                throw new Exception("Current password is incorrect.");
+
+            var updateDto = data.ToKeycloakUpdateRequest(existing);
+
             var adminToken = await GetAdminTokenAsync(cancellationToken);
-            await _keycloakClient.UpdateUserAsync(_keycloakOptions.Realm, data.Id, $"Bearer {adminToken}", dto, cancellationToken);
+            await _keycloakClient.UpdateUserAsync(
+                _keycloakOptions.Realm,
+                data.Id,
+                $"Bearer {adminToken}",
+                updateDto,
+                cancellationToken);
+
+            return true;
         }
         catch (ApiException ex)
         {
@@ -158,8 +151,6 @@ public class KeycloakIntegrationService : IKeycloakIntegrationService
             Console.WriteLine("Keycloak error:" + content);
             throw;
         }
-        
-        return true;
     }
 
     public async Task<AuthResponseDto> RefreshTokenAsync(

@@ -111,6 +111,76 @@ namespace AuthService.WebApi.External.Keycloak.Models
                 return values[0];
             return null;
         }
+
+        public static KeycloakUserDto ToKeycloakUpdateRequest(
+        this UpdateUserRequest request,
+        KeycloakUserDto existing)
+        {
+            var updateDto = new KeycloakUserDto
+            {
+                Id = existing.Id,
+                Username = existing.Username,
+                Email = existing.Email,
+                FirstName = existing.FirstName,
+                LastName = existing.LastName,
+                Enabled = existing.Enabled,
+                Attributes = existing.Attributes != null
+                    ? new Dictionary<string, List<string>>(existing.Attributes)
+                    : new Dictionary<string, List<string>>()
+            };
+
+            if (request.FirstName != null)
+                updateDto.FirstName = string.IsNullOrWhiteSpace(request.FirstName) ? null : request.FirstName;
+            if (request.LastName != null)
+                updateDto.LastName = string.IsNullOrWhiteSpace(request.LastName) ? null : request.LastName;
+            if (request.Email != null)
+            {
+                updateDto.Email = string.IsNullOrWhiteSpace(request.Email) ? null : request.Email;
+                updateDto.Username = updateDto.Email;
+            }
+
+            UpdateAttributeForPartialUpdate(updateDto.Attributes, "secondName", request.SecondName);
+            UpdateAttributeForPartialUpdate(updateDto.Attributes, "phone", request.Phone);
+            UpdateAttributeForPartialUpdate(updateDto.Attributes, "birthDate", request.BirthDate);
+            UpdateAttributeForPartialUpdate(updateDto.Attributes, "city", request.City);
+            UpdateAttributeForPartialUpdate(updateDto.Attributes, "about", request.About);
+            UpdateAttributeForPartialUpdate(updateDto.Attributes, "educationPlace", request.EducationPlace);
+            UpdateAttributeForPartialUpdate(updateDto.Attributes, "educationStartYear", request.EducationStartYear);
+            UpdateAttributeForPartialUpdate(updateDto.Attributes, "educationEndYear", request.EducationEndYear);
+            UpdateAttributeForPartialUpdate(updateDto.Attributes, "educationField", request.EducationField);
+
+            if (!string.IsNullOrEmpty(request.NewPassword))
+            {
+                updateDto.Credentials = new[]
+                {
+                new KeycloakCredential
+                {
+                    Type = "password",
+                    Value = request.NewPassword,
+                    Temporary = false
+                }
+            };
+            }
+
+            return updateDto;
+        }
+
+        private static void UpdateAttributeForPartialUpdate(
+            Dictionary<string, List<string>> attributes,
+            string key,
+            string? value)
+        {
+            if (value == null) return;
+
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                attributes.Remove(key);
+            }
+            else
+            {
+                attributes[key] = new List<string> { value };
+            }
+        }
     }
 
     public class UserProfile
