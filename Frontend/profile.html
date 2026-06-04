@@ -1,0 +1,630 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Мой профиль — Nirbi</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700;800&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/main.css" />
+  <link rel="stylesheet" href="css/tasks.css" />
+  <style>
+    /* ── Profile page specific styles ──────────────────────────────────────── */
+
+    /* Avatar */
+    .profile-avatar {
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--primary) 0%, #0263d1 100%);
+      display: grid;
+      place-items: center;
+      flex-shrink: 0;
+    }
+    .profile-avatar-text {
+      font-family: 'Instrument Serif', serif;
+      font-size: 1.75rem;
+      color: #fff;
+      font-weight: 400;
+      letter-spacing: -.02em;
+      line-height: 1;
+    }
+
+    /* Profile header card */
+    .profile-header-card {
+      background: var(--bg);
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.75rem 2rem;
+      display: flex;
+      align-items: center;
+      gap: 1.5rem;
+      box-shadow: var(--shadow);
+    }
+    .profile-header-info {
+      flex: 1;
+      min-width: 0;
+    }
+    .profile-name {
+      font-family: 'Instrument Serif', serif;
+      font-size: 1.6rem;
+      font-weight: 400;
+      letter-spacing: -.02em;
+      color: var(--text);
+      line-height: 1.2;
+    }
+    .profile-meta-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1.25rem;
+      margin-top: .5rem;
+    }
+    .profile-meta-item {
+      display: flex;
+      align-items: center;
+      gap: .4rem;
+      font-size: .85rem;
+      color: var(--text-sec);
+      font-weight: 500;
+    }
+    .profile-meta-item svg {
+      width: 16px;
+      height: 16px;
+      flex-shrink: 0;
+      color: var(--text-sec);
+      opacity: .7;
+    }
+
+    /* Skeleton shimmer for header */
+    .profile-skeleton.is-loading .profile-name,
+    .profile-skeleton.is-loading .profile-meta-item {
+      background: linear-gradient(90deg, var(--surface) 25%, #e8ecf2 50%, var(--surface) 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.4s infinite;
+      border-radius: 6px;
+      color: transparent !important;
+    }
+    .profile-skeleton.is-loading .profile-name { width: 220px; height: 28px; }
+    .profile-skeleton.is-loading .profile-meta-item { width: 140px; height: 16px; }
+    .profile-skeleton.is-loading .profile-avatar {
+      background: linear-gradient(90deg, var(--surface) 25%, #e8ecf2 50%, var(--surface) 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.4s infinite;
+    }
+
+    /* Tab bar */
+    .profile-tabs {
+      display: flex;
+      gap: 0;
+      border-bottom: 2px solid var(--border);
+    }
+    .profile-tab-btn {
+      padding: .75rem 1.5rem;
+      font-size: .875rem;
+      font-weight: 700;
+      color: var(--text-sec);
+      border-bottom: 2px solid transparent;
+      margin-bottom: -2px;
+      transition: color var(--transition), border-color var(--transition);
+      display: flex;
+      align-items: center;
+      gap: .5rem;
+    }
+    .profile-tab-btn svg { width: 16px; height: 16px; flex-shrink: 0; }
+    .profile-tab-btn:hover { color: var(--text); }
+    .profile-tab-btn.active {
+      color: var(--primary);
+      border-bottom-color: var(--primary);
+    }
+
+    /* Tab panes */
+    .profile-tab-pane {
+      display: flex;
+      flex-direction: column;
+      gap: 1.25rem;
+      padding-top: 1.75rem;
+    }
+
+    /* Section card */
+    .pf-section {
+      background: var(--bg);
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.75rem 2rem;
+      box-shadow: var(--shadow);
+    }
+    .pf-section-title {
+      font-size: 1rem;
+      font-weight: 800;
+      color: var(--text);
+      letter-spacing: -.02em;
+      margin-bottom: 1.25rem;
+      display: flex;
+      align-items: center;
+      gap: .5rem;
+    }
+    .pf-section-title svg {
+      width: 18px;
+      height: 18px;
+      color: var(--primary);
+    }
+    .pf-section-divider {
+      height: 1px;
+      background: var(--border);
+      margin: 1.25rem 0;
+    }
+
+    /* Form grid */
+    .pf-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: .9rem;
+    }
+    .pf-span-2 { grid-column: 1 / -1; }
+
+    .pf-field {
+      display: flex;
+      flex-direction: column;
+      gap: .35rem;
+    }
+    .pf-label {
+      font-size: .78rem;
+      font-weight: 700;
+      color: var(--text-sec);
+      text-transform: uppercase;
+      letter-spacing: .04em;
+    }
+    .pf-input-wrap { position: relative; }
+    .pf-input {
+      width: 100%;
+      height: 44px;
+      padding: 0 1rem;
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius-sm);
+      background: var(--surface);
+      font-family: 'Manrope', sans-serif;
+      font-size: .9rem;
+      font-weight: 500;
+      color: var(--text);
+      outline: none;
+      transition: border-color var(--transition), box-shadow var(--transition), background var(--transition);
+    }
+    .pf-input::placeholder { color: var(--text-sec); font-weight: 400; }
+    .pf-input:focus {
+      border-color: var(--primary);
+      background: var(--bg);
+      box-shadow: 0 0 0 3px rgba(1,75,170,.09);
+    }
+    .pf-input.error {
+      border-color: var(--error);
+      box-shadow: 0 0 0 3px rgba(220,38,38,.07);
+    }
+    .pf-textarea {
+      height: auto;
+      min-height: 90px;
+      padding-top: .75rem;
+      padding-bottom: .75rem;
+      resize: vertical;
+    }
+    .pf-error {
+      font-size: .78rem;
+      color: var(--error);
+      font-weight: 500;
+      min-height: 1em;
+    }
+
+    /* Password field with toggle */
+    .pf-pwd-wrap { position: relative; }
+    .pf-input-pwd { padding-right: 2.8rem; }
+    .pf-pwd-toggle {
+      position: absolute;
+      right: .75rem;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--text-sec);
+      display: flex;
+      padding: 4px;
+      border-radius: 4px;
+      transition: color var(--transition);
+    }
+    .pf-pwd-toggle:hover { color: var(--primary); }
+    .pf-pwd-toggle svg { width: 17px; height: 17px; }
+
+    /* Current password confirmation block */
+    .pf-confirm-block {
+      background: var(--surface);
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 1rem 1.25rem;
+      display: flex;
+      flex-direction: column;
+      gap: .75rem;
+    }
+    .pf-confirm-label {
+      font-size: .82rem;
+      color: var(--text-sec);
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+      gap: .4rem;
+    }
+    .pf-confirm-label svg {
+      width: 15px;
+      height: 15px;
+      flex-shrink: 0;
+      color: var(--warning);
+    }
+
+    /* Actions row */
+    .pf-actions {
+      display: flex;
+      justify-content: flex-end;
+      padding-top: .25rem;
+    }
+
+    /* Security info banner */
+    .security-banner {
+      background: var(--primary-light);
+      border: 1.5px solid rgba(1,75,170,.15);
+      border-radius: var(--radius-sm);
+      padding: .85rem 1rem;
+      font-size: .82rem;
+      color: var(--primary);
+      font-weight: 500;
+      display: flex;
+      align-items: flex-start;
+      gap: .5rem;
+      line-height: 1.5;
+    }
+    .security-banner svg { width: 17px; height: 17px; flex-shrink: 0; margin-top: 1px; }
+
+    /* Responsive */
+    @media (max-width: 680px) {
+      .pf-grid { grid-template-columns: 1fr; }
+      .pf-span-2 { grid-column: 1; }
+      .profile-header-card { flex-direction: column; align-items: flex-start; }
+      .profile-tabs { overflow-x: auto; }
+      .profile-tab-btn { white-space: nowrap; }
+    }
+  </style>
+</head>
+<body>
+
+<div id="toast-container"></div>
+
+<div id="app-shell">
+
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="sidebar-brand">
+      <span class="brand-logo">N</span>
+      <span class="brand-name">Nirbi</span>
+    </div>
+    <nav class="sidebar-nav">
+      <a href="tasks.html" class="nav-item" data-tooltip="Задачи">
+        <svg viewBox="0 0 24 24" fill="none"><rect x="3" y="3" width="8" height="8" rx="2" stroke="currentColor" stroke-width="1.75"/><rect x="13" y="3" width="8" height="8" rx="2" stroke="currentColor" stroke-width="1.75"/><rect x="3" y="13" width="8" height="8" rx="2" stroke="currentColor" stroke-width="1.75"/><rect x="13" y="13" width="8" height="8" rx="2" stroke="currentColor" stroke-width="1.75"/></svg>
+        <span>Задачи</span>
+      </a>
+      <a href="confirmations.html" class="nav-item" data-tooltip="Подтверждения">
+        <svg viewBox="0 0 24 24" fill="none"><path d="M9 12l2 2 4-4M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0z" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <span>Подтверждения</span>
+      </a>
+      <a href="profile.html" class="nav-item active" data-tooltip="Мой профиль">
+        <svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="8" r="4" stroke="currentColor" stroke-width="1.75"/><path d="M4 20c0-4 3.582-7 8-7s8 3 8 7" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"/></svg>
+        <span>Профиль</span>
+      </a>
+    </nav>
+    <button class="nav-item nav-logout" id="btn-logout" data-tooltip="Выйти">
+      <svg viewBox="0 0 24 24" fill="none"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4M10 17l5-5-5-5M15 12H3" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <span>Выйти</span>
+    </button>
+  </aside>
+
+  <!-- Main -->
+  <main class="main-content">
+
+    <!-- Page header -->
+    <header class="page-header">
+      <div class="page-title-block">
+        <h1 class="page-title">Мой профиль</h1>
+        <p class="page-sub">Управляйте личными данными и настройками безопасности</p>
+      </div>
+    </header>
+
+    <!-- Profile header card -->
+    <div class="profile-header-card profile-skeleton">
+      <div class="profile-avatar">
+        <span class="profile-avatar-text" id="avatar-initials">?</span>
+      </div>
+      <div class="profile-header-info">
+        <div class="profile-name" id="profile-full-name">Загрузка...</div>
+        <div class="profile-meta-row">
+          <span class="profile-meta-item">
+            <svg viewBox="0 0 20 20" fill="none"><rect x="2" y="5" width="16" height="11" rx="2" stroke="currentColor" stroke-width="1.5"/><path d="M2 7l8 5 8-5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+            <span id="profile-email">—</span>
+          </span>
+          <span class="profile-meta-item">
+            <svg viewBox="0 0 20 20" fill="none"><path d="M6.5 3h-2A1.5 1.5 0 0 0 3 4.5C3 12.508 7.492 17 15.5 17a1.5 1.5 0 0 0 1.5-1.5v-2a1.5 1.5 0 0 0-1.5-1.5c-.8 0-1.572-.13-2.288-.37a1.5 1.5 0 0 0-1.538.374l-.926.926A11.035 11.035 0 0 1 7.57 9.252l.926-.926A1.5 1.5 0 0 0 8.87 6.788 9.55 9.55 0 0 1 8.5 4.5 1.5 1.5 0 0 0 7 3H6.5z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <span id="profile-phone-display">—</span>
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="profile-tabs">
+      <button class="profile-tab-btn active" data-tab="info">
+        <svg viewBox="0 0 20 20" fill="none"><circle cx="10" cy="7" r="3.5" stroke="currentColor" stroke-width="1.5"/><path d="M3 17c0-3.314 3.134-6 7-6s7 2.686 7 6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        Личные данные
+      </button>
+      <button class="profile-tab-btn" data-tab="education">
+        <svg viewBox="0 0 20 20" fill="none"><path d="M10 3L2 7l8 4 8-4-8-4zM2 11l8 4 8-4M2 15l8 4 8-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Образование
+      </button>
+      <button class="profile-tab-btn" data-tab="security">
+        <svg viewBox="0 0 20 20" fill="none"><rect x="4" y="9" width="12" height="9" rx="2" stroke="currentColor" stroke-width="1.5"/><path d="M7 9V6.5a3 3 0 0 1 6 0V9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        Безопасность
+      </button>
+    </div>
+
+    <!-- ── Tab: Personal info ────────────────────────────────────────────── -->
+    <div class="profile-tab-pane" id="tab-info">
+      <form id="form-info" novalidate>
+
+        <!-- Basic info -->
+        <div class="pf-section">
+          <div class="pf-section-title">
+            <svg viewBox="0 0 20 20" fill="none"><circle cx="10" cy="7" r="3.5" stroke="currentColor" stroke-width="1.5"/><path d="M3 17c0-3.314 3.134-6 7-6s7 2.686 7 6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+            ФИО и контакты
+          </div>
+          <div class="pf-grid">
+
+            <div class="pf-field">
+              <label class="pf-label" for="pf-firstname">Имя</label>
+              <div class="pf-input-wrap">
+                <input class="pf-input" id="pf-firstname" type="text" placeholder="Иван" autocomplete="given-name" />
+              </div>
+              <span class="pf-error" id="pf-firstname-error"></span>
+            </div>
+
+            <div class="pf-field">
+              <label class="pf-label" for="pf-secondname">Отчество</label>
+              <div class="pf-input-wrap">
+                <input class="pf-input" id="pf-secondname" type="text" placeholder="Иванович" autocomplete="additional-name" />
+              </div>
+              <span class="pf-error" id="pf-secondname-error"></span>
+            </div>
+
+            <div class="pf-field pf-span-2">
+              <label class="pf-label" for="pf-lastname">Фамилия</label>
+              <div class="pf-input-wrap">
+                <input class="pf-input" id="pf-lastname" type="text" placeholder="Иванов" autocomplete="family-name" />
+              </div>
+              <span class="pf-error" id="pf-lastname-error"></span>
+            </div>
+
+            <div class="pf-field">
+              <label class="pf-label" for="pf-phone">Телефон</label>
+              <div class="pf-input-wrap">
+                <input class="pf-input" id="pf-phone" type="tel" placeholder="+7 900 000 00 00" autocomplete="tel" />
+              </div>
+              <span class="pf-error" id="pf-phone-error"></span>
+            </div>
+
+            <div class="pf-field">
+              <label class="pf-label" for="pf-email">Email</label>
+              <div class="pf-input-wrap">
+                <input class="pf-input" id="pf-email" type="email" placeholder="you@example.com" autocomplete="email" />
+              </div>
+              <span class="pf-error" id="pf-email-error"></span>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- Additional info -->
+        <div class="pf-section">
+          <div class="pf-section-title">
+            <svg viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="7.5" stroke="currentColor" stroke-width="1.5"/><path d="M10 6v4l3 2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+            Дополнительно
+          </div>
+          <div class="pf-grid">
+
+            <div class="pf-field">
+              <label class="pf-label" for="pf-birthdate">Дата рождения</label>
+              <div class="pf-input-wrap">
+                <input class="pf-input" id="pf-birthdate" type="date" />
+              </div>
+            </div>
+
+            <div class="pf-field">
+              <label class="pf-label" for="pf-city">Город</label>
+              <div class="pf-input-wrap">
+                <input class="pf-input" id="pf-city" type="text" placeholder="Москва" />
+              </div>
+            </div>
+
+            <div class="pf-field pf-span-2">
+              <label class="pf-label" for="pf-about">О себе</label>
+              <div class="pf-input-wrap">
+                <textarea class="pf-input pf-textarea" id="pf-about" rows="3" placeholder="Расскажите немного о себе..."></textarea>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- Confirm with password -->
+        <div class="pf-section">
+          <div class="pf-confirm-block">
+            <div class="pf-confirm-label">
+              <svg viewBox="0 0 20 20" fill="none"><path d="M10 2a6 6 0 0 1 6 6v2h1a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1v-7a1 1 0 0 1 1-1h1V8a6 6 0 0 1 6-6zm0 10a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3zm0-8a4 4 0 0 0-4 4v2h8V8a4 4 0 0 0-4-4z" fill="currentColor" opacity=".5"/></svg>
+              Для сохранения изменений введите текущий пароль
+            </div>
+            <div class="pf-field">
+              <div class="pf-pwd-wrap">
+                <input class="pf-input pf-input-pwd" id="pf-current-pwd-info" type="password" placeholder="Текущий пароль" autocomplete="current-password" />
+                <button type="button" class="pf-pwd-toggle" id="toggle-current-pwd-info" aria-label="Показать пароль">
+                  <svg viewBox="0 0 20 20" fill="none"><path d="M2 10s3-6 8-6 8 6 8 6-3 6-8 6-8-6-8-6z" stroke="currentColor" stroke-width="1.5"/><circle cx="10" cy="10" r="2.5" stroke="currentColor" stroke-width="1.5"/></svg>
+                </button>
+              </div>
+              <span class="pf-error" id="pf-current-pwd-info-error"></span>
+            </div>
+          </div>
+
+          <div class="pf-actions" style="margin-top:1rem;">
+            <button type="submit" class="btn-primary" id="btn-save-info" style="width:auto;padding:0 2rem;">
+              <span class="btn-label">Сохранить изменения</span>
+              <span class="btn-spinner" hidden></span>
+            </button>
+          </div>
+        </div>
+
+      </form>
+    </div>
+
+    <!-- ── Tab: Education ────────────────────────────────────────────────── -->
+    <div class="profile-tab-pane" id="tab-education" hidden>
+      <form id="form-education" novalidate>
+
+        <div class="pf-section">
+          <div class="pf-section-title">
+            <svg viewBox="0 0 20 20" fill="none"><path d="M10 3L2 7l8 4 8-4-8-4zM2 11l8 4 8-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            Учебное заведение
+          </div>
+          <div class="pf-grid">
+
+            <div class="pf-field pf-span-2">
+              <label class="pf-label" for="pf-edu-place">Название учебного заведения</label>
+              <div class="pf-input-wrap">
+                <input class="pf-input" id="pf-edu-place" type="text" placeholder="МГУ им. М.В. Ломоносова" />
+              </div>
+            </div>
+
+            <div class="pf-field pf-span-2">
+              <label class="pf-label" for="pf-edu-field">Направление / специальность</label>
+              <div class="pf-input-wrap">
+                <input class="pf-input" id="pf-edu-field" type="text" placeholder="Информатика и вычислительная техника" />
+              </div>
+            </div>
+
+            <div class="pf-field">
+              <label class="pf-label" for="pf-edu-start">Год начала</label>
+              <div class="pf-input-wrap">
+                <input class="pf-input" id="pf-edu-start" type="number" min="1950" max="2099" placeholder="2020" />
+              </div>
+              <span class="pf-error" id="pf-edu-start-error"></span>
+            </div>
+
+            <div class="pf-field">
+              <label class="pf-label" for="pf-edu-end">Год окончания</label>
+              <div class="pf-input-wrap">
+                <input class="pf-input" id="pf-edu-end" type="number" min="1950" max="2099" placeholder="2026" />
+              </div>
+              <span class="pf-error" id="pf-edu-end-error"></span>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- Confirm with password -->
+        <div class="pf-section">
+          <div class="pf-confirm-block">
+            <div class="pf-confirm-label">
+              <svg viewBox="0 0 20 20" fill="none"><path d="M10 2a6 6 0 0 1 6 6v2h1a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1v-7a1 1 0 0 1 1-1h1V8a6 6 0 0 1 6-6zm0 10a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3zm0-8a4 4 0 0 0-4 4v2h8V8a4 4 0 0 0-4-4z" fill="currentColor" opacity=".5"/></svg>
+              Для сохранения изменений введите текущий пароль
+            </div>
+            <div class="pf-field">
+              <div class="pf-pwd-wrap">
+                <input class="pf-input pf-input-pwd" id="pf-current-pwd-edu" type="password" placeholder="Текущий пароль" autocomplete="current-password" />
+                <button type="button" class="pf-pwd-toggle" id="toggle-current-pwd-edu" aria-label="Показать пароль">
+                  <svg viewBox="0 0 20 20" fill="none"><path d="M2 10s3-6 8-6 8 6 8 6-3 6-8 6-8-6-8-6z" stroke="currentColor" stroke-width="1.5"/><circle cx="10" cy="10" r="2.5" stroke="currentColor" stroke-width="1.5"/></svg>
+                </button>
+              </div>
+              <span class="pf-error" id="pf-current-pwd-edu-error"></span>
+            </div>
+          </div>
+
+          <div class="pf-actions" style="margin-top:1rem;">
+            <button type="submit" class="btn-primary" id="btn-save-edu" style="width:auto;padding:0 2rem;">
+              <span class="btn-label">Сохранить образование</span>
+              <span class="btn-spinner" hidden></span>
+            </button>
+          </div>
+        </div>
+
+      </form>
+    </div>
+
+    <!-- ── Tab: Security ─────────────────────────────────────────────────── -->
+    <div class="profile-tab-pane" id="tab-security" hidden>
+      <form id="form-security" novalidate>
+
+        <div class="pf-section">
+          <div class="pf-section-title">
+            <svg viewBox="0 0 20 20" fill="none"><rect x="4" y="9" width="12" height="9" rx="2" stroke="currentColor" stroke-width="1.5"/><path d="M7 9V6.5a3 3 0 0 1 6 0V9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+            Смена пароля
+          </div>
+
+          <div class="security-banner">
+            <svg viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="8.5" stroke="currentColor" stroke-width="1.5"/><path d="M10 9v5M10 6.5v.5" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"/></svg>
+            После смены пароля вам потребуется войти в систему заново на других устройствах.
+          </div>
+
+          <div style="display:flex;flex-direction:column;gap:.9rem;margin-top:1.25rem;">
+
+            <div class="pf-field">
+              <label class="pf-label" for="pf-pwd-current">Текущий пароль</label>
+              <div class="pf-pwd-wrap">
+                <input class="pf-input pf-input-pwd" id="pf-pwd-current" type="password" placeholder="••••••••" autocomplete="current-password" />
+                <button type="button" class="pf-pwd-toggle" id="toggle-pwd-current" aria-label="Показать пароль">
+                  <svg viewBox="0 0 20 20" fill="none"><path d="M2 10s3-6 8-6 8 6 8 6-3 6-8 6-8-6-8-6z" stroke="currentColor" stroke-width="1.5"/><circle cx="10" cy="10" r="2.5" stroke="currentColor" stroke-width="1.5"/></svg>
+                </button>
+              </div>
+              <span class="pf-error" id="pf-pwd-current-error"></span>
+            </div>
+
+            <div class="pf-section-divider"></div>
+
+            <div class="pf-field">
+              <label class="pf-label" for="pf-pwd-new">Новый пароль</label>
+              <div class="pf-pwd-wrap">
+                <input class="pf-input pf-input-pwd" id="pf-pwd-new" type="password" placeholder="Минимум 6 символов" autocomplete="new-password" />
+                <button type="button" class="pf-pwd-toggle" id="toggle-pwd-new" aria-label="Показать пароль">
+                  <svg viewBox="0 0 20 20" fill="none"><path d="M2 10s3-6 8-6 8 6 8 6-3 6-8 6-8-6-8-6z" stroke="currentColor" stroke-width="1.5"/><circle cx="10" cy="10" r="2.5" stroke="currentColor" stroke-width="1.5"/></svg>
+                </button>
+              </div>
+              <span class="pf-error" id="pf-pwd-new-error"></span>
+            </div>
+
+            <div class="pf-field">
+              <label class="pf-label" for="pf-pwd-confirm">Повторите новый пароль</label>
+              <div class="pf-pwd-wrap">
+                <input class="pf-input pf-input-pwd" id="pf-pwd-confirm" type="password" placeholder="••••••••" autocomplete="new-password" />
+                <button type="button" class="pf-pwd-toggle" id="toggle-pwd-confirm" aria-label="Показать пароль">
+                  <svg viewBox="0 0 20 20" fill="none"><path d="M2 10s3-6 8-6 8 6 8 6-3 6-8 6-8-6-8-6z" stroke="currentColor" stroke-width="1.5"/><circle cx="10" cy="10" r="2.5" stroke="currentColor" stroke-width="1.5"/></svg>
+                </button>
+              </div>
+              <span class="pf-error" id="pf-pwd-confirm-error"></span>
+            </div>
+
+          </div>
+
+          <div class="pf-actions" style="margin-top:1.5rem;">
+            <button type="submit" class="btn-primary" id="btn-change-pwd" style="width:auto;padding:0 2rem;">
+              <span class="btn-label">Изменить пароль</span>
+              <span class="btn-spinner" hidden></span>
+            </button>
+          </div>
+
+        </div>
+      </form>
+    </div>
+
+  </main>
+</div>
+
+<script type="module" src="js/profile.js"></script>
+</body>
+</html>
