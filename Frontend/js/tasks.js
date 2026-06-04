@@ -1,6 +1,6 @@
 import { toast }                              from './toast.js';
 import { tokenStore }                         from './tokenStore.js';
-import { authApi }                            from './api.js';
+import { authApi, usersApi }                  from './api.js';
 import { tasksApi }                           from './tasksApi.js';
 import { dataApi }                            from './dataApi.js';
 import { confirmationsApi }                   from './confirmationsApi.js';
@@ -26,6 +26,7 @@ let formMarker  = null;
 let mainMarkers = [];
 let removedImageIds = new Set();  // IDs картинок, помеченных на удаление в форме редактирования
 let editingTask    = null;         // полные данные задачи при редактировании (включая images)
+let userNameCache  = new Map();    // userId → username (загружается батчевым запросом к AuthService)
 
 // Бэкенд использует статус "Created" как начальный, а не "Pending".
 // Нормализуем оба варианта — иначе кнопки действий не появятся.
@@ -102,7 +103,9 @@ function isOwner(task) {
 }
 
 function ownerBadge(task) {
-  return isOwner(task) ? 'Вы' : 'Организатор';
+  if (isOwner(task)) return 'Вы';
+  const name = getOwnerName(task);
+  return name || 'Организатор';
 }
 
 // ── Image lightbox ──────────────────────────────────────────────────────────
@@ -194,12 +197,42 @@ async function loadTasks() {
 
     const data = await tasksApi.getAll(100) || [];
     allTasks = Array.isArray(data) ? data : [];
+
+    // Батчевый запрос имён организаторов — один запрос на всех
+    await enrichOwnerNames(allTasks);
+
     renderTasks();
   } catch (e) {
     toast.error('Не удалось загрузить задачи');
     tasksGrid.innerHTML = '';
     emptyState.hidden = false;
   }
+}
+
+// ── Owner name enrichment ──────────────────────────────────────────────────────
+// Собираем уникальные owner ID из задач, которых ещё нет в кэше,
+// и запрашиваем их имена одним батчевым вызовом.
+async function enrichOwnerNames(tasks) {
+  const missing = [...new Set(
+    tasks
+      .map(t => getOwnerId(t))
+      .filter(id => id && !userNameCache.has(String(id)))
+      .map(String)
+  )];
+  if (!missing.length) return;
+  try {
+    const nameMap = await usersApi.getUsernameMap(missing);
+    nameMap.forEach((username, id) => userNameCache.set(id, username));
+  } catch (e) {
+    console.warn('[tasks] enrichOwnerNames failed:', e.message);
+  }
+}
+
+// Получить отображаемое имя организатора задачи из кэша
+function getOwnerName(task) {
+  const id = getOwnerId(task);
+  if (!id) return null;
+  return userNameCache.get(String(id)) || null;
 }
 
 // ── Render ────────────────────────────────────────────────────────────────────
@@ -293,6 +326,11 @@ async function openDetail(taskId) {
   // populate header
   document.getElementById('detail-status-badge').textContent = statusLabel(task.status);
   document.getElementById('detail-title').textContent = task.name || 'Без названия';
+  // Подгружаем имя организатора в кэш, если его там ещё нет
+  const detailOwnerId = getOwnerId(task);
+  if (detailOwnerId && !userNameCache.has(String(detailOwnerId))) {
+    await enrichOwnerNames([task]);
+  }
   document.getElementById('detail-meta').innerHTML =
     `<span>Организатор: <strong>${ownerBadge(task)}</strong></span>
      <span>Волонтёров: ${task.numberVolunteers || 0}</span>

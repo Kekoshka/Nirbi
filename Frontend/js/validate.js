@@ -14,10 +14,13 @@ function val(id) {
 }
 
 export function validateLogin() {
-  clearErrors(['login-username','login-username-error'], ['login-password','login-password-error']);
+  clearErrors(
+    ['login-username', 'login-username-error'],
+    ['login-password', 'login-password-error'],
+  );
   let ok = true;
   if (!val('login-username')) {
-    setError('login-username', 'login-username-error', 'Введите имя пользователя');
+    setError('login-username', 'login-username-error', 'Введите имя пользователя или email');
     ok = false;
   }
   if (!val('login-password')) {
@@ -29,22 +32,44 @@ export function validateLogin() {
 
 export function validateRegister() {
   clearErrors(
-    ['reg-username','reg-username-error'],
-    ['reg-email','reg-email-error'],
-    ['reg-password','reg-password-error'],
-    ['reg-password2','reg-password2-error'],
+    ['reg-fname',     'reg-fname-error'],
+    ['reg-sname',     'reg-sname-error'],
+    ['reg-lname',     'reg-lname-error'],
+    ['reg-phone',     'reg-phone-error'],
+    ['reg-email',     'reg-email-error'],
+    ['reg-password',  'reg-password-error'],
+    ['reg-password2', 'reg-password2-error'],
   );
   let ok = true;
 
-  if (!val('reg-username') || val('reg-username').length < 3) {
-    setError('reg-username', 'reg-username-error', 'Минимум 3 символа');
+  if (!val('reg-fname') || val('reg-fname').length < 2) {
+    setError('reg-fname', 'reg-fname-error', 'Введите имя (минимум 2 символа)');
     ok = false;
   }
+  if (!val('reg-sname') || val('reg-sname').length < 2) {
+    setError('reg-sname', 'reg-sname-error', 'Введите отчество (минимум 2 символа)');
+    ok = false;
+  }
+  if (!val('reg-lname') || val('reg-lname').length < 2) {
+    setError('reg-lname', 'reg-lname-error', 'Введите фамилию (минимум 2 символа)');
+    ok = false;
+  }
+
+  const phone = val('reg-phone');
+  if (!phone) {
+    setError('reg-phone', 'reg-phone-error', 'Введите номер телефона');
+    ok = false;
+  } else if (!/^\+?[\d\s\-()]{7,20}$/.test(phone)) {
+    setError('reg-phone', 'reg-phone-error', 'Введите корректный номер телефона');
+    ok = false;
+  }
+
   const email = val('reg-email');
   if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
     setError('reg-email', 'reg-email-error', 'Введите корректный email');
     ok = false;
   }
+
   if (!val('reg-password') || val('reg-password').length < 6) {
     setError('reg-password', 'reg-password-error', 'Минимум 6 символов');
     ok = false;
@@ -57,7 +82,7 @@ export function validateRegister() {
 }
 
 export function validateForgot() {
-  clearErrors(['forgot-email','forgot-email-error']);
+  clearErrors(['forgot-email', 'forgot-email-error']);
   const email = val('forgot-email');
   if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
     setError('forgot-email', 'forgot-email-error', 'Введите корректный email');

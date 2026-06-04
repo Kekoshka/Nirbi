@@ -104,20 +104,66 @@ async function authRequest(url, body) {
 }
 
 export const authApi = {
+  // Логин: username (email или телефон) + password
   login(username, password) {
     return authRequest('/api/Auth/login', { username, password });
   },
-  register(username, email, password) {
-    return authRequest('/api/Auth/register', { username, email, password });
+
+  // Регистрация: новый контракт бэкенда (FName, SName, LName, phone, email, password)
+  register({ fName, sName, lName, phone, email, password }) {
+    return authRequest('/api/Auth/register', {
+      FName:    fName,
+      SName:    sName,
+      LName:    lName,
+      phone,
+      email,
+      password,
+    });
   },
+
   forgotPassword(email) {
     return authRequest('/api/Auth/forgot-password', { email });
   },
+
   async logout(refreshToken) {
     await fetch(`${GATEWAY}/api/Auth/logout`, {
       method:  'POST',
       headers: { 'Content-Type': 'application/json' },
       body:    JSON.stringify({ refreshToken }),
     }).catch(() => {});
+  },
+};
+
+// ── User lookup — для обогащения данных задач/подтверждений именами ──────────
+export const usersApi = {
+  // Получить пользователя по ID
+  getById(userId) {
+    return api.get(`/api/Auth/users/${userId}`);
+  },
+
+  // Получить список пользователей по массиву ID (батчевый запрос)
+  // Бэкенд: POST /api/Auth/users/batch с телом { ids: string[] }
+  // Возвращает UserSearchResultDto[]: [{ userId, username }]
+  async getByIds(ids) {
+    if (!ids || !ids.length) return [];
+    try {
+      const result = await api.post('/api/Auth/users/batch', { ids });
+      return Array.isArray(result) ? result : [];
+    } catch (e) {
+      console.warn('[usersApi] getByIds failed:', e.message);
+      return [];
+    }
+  },
+
+  // Удобный хелпер: возвращает Map<userId, username> для быстрого lookup
+  async getUsernameMap(ids) {
+    const unique = [...new Set((ids || []).filter(Boolean).map(String))];
+    if (!unique.length) return new Map();
+    const users = await this.getByIds(unique);
+    const map = new Map();
+    users.forEach(u => {
+      if (u?.userId) map.set(String(u.userId), u.username || u.userId);
+    });
+    return map;
   },
 };
