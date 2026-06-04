@@ -118,6 +118,7 @@ services:
       KEYCLOAK_ADMIN: admin
       KEYCLOAK_ADMIN_PASSWORD: admin_password
       KC_PROXY: edge
+      KEYCLOAK_HTTP_ENABLED: true
       KC_HOSTNAME_STRICT: false
       KC_HEALTH_ENABLED: true
     ports:
