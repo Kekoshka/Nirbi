@@ -9,6 +9,14 @@ export const tasksApi = {
     return api.get(`/api/tasks/${id}`);
   },
 
+  // Батч-превью для ленивой загрузки картинок.
+  // taskIds: string[] (пачка из 5-10 id). Возвращает
+  // [{ taskId, previewImageData, previewImageContentType }] — только для задач,
+  // у которых есть картинка.
+  getPreviews(taskIds) {
+    return api.post('/api/tasks/previews', { taskIds });
+  },
+
   // Gateway /api/tasks принимает multipart/form-data
   // (см. CreateMinorTaskGatewayRequest: [FromForm], Images = List<IFormFile>).
   // Gateway сам кладёт файлы в DataService и форвардит UUID коллекции в MinorTaskService.

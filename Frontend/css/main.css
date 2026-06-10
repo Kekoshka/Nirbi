@@ -19,22 +19,33 @@
   --shadow:     0 4px 24px rgba(1,75,170,0.08), 0 1px 4px rgba(0,0,0,0.04);
   --shadow-lg:  0 16px 48px rgba(1,75,170,0.14), 0 4px 12px rgba(0,0,0,0.06);
   --transition: 0.2s cubic-bezier(0.4,0,0.2,1);
+
+  /* Sidebar width tokens — used in JS-free layout math */
+  --sidebar-w:       220px;
+  --sidebar-w-slim:   64px;
 }
 
 /* ── Reset ──────────────────────────────────────────────────────────────── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-html { font-size: 16px; -webkit-text-size-adjust: 100%; }
+
+/* Prevent horizontal scroll globally — this is the root fix for the sidebar issue */
+html {
+  font-size: 16px;
+  -webkit-text-size-adjust: 100%;
+  overflow-x: hidden;
+}
 body {
   font-family: 'Manrope', sans-serif;
   background: var(--bg);
   color: var(--text);
   line-height: 1.5;
   min-height: 100vh;
+  overflow-x: hidden; /* belt-and-suspenders for horizontal scroll bug */
 }
 a { color: var(--primary); text-decoration: none; }
 a:hover { text-decoration: underline; }
 button { cursor: pointer; border: none; background: none; font-family: inherit; }
-input, button { font-size: 1rem; }
+input, button, textarea, select { font-size: 1rem; }
 
 /* ── Auth Layout ────────────────────────────────────────────────────────── */
 .auth-layout {
@@ -61,6 +72,7 @@ input, button { font-size: 1rem; }
   font-family: 'Instrument Serif', serif;
   font-size: 1.4rem; color: #fff;
   backdrop-filter: blur(8px);
+  flex-shrink: 0;
 }
 .brand-name { font-size: 1.25rem; font-weight: 700; color: #fff; letter-spacing: -.02em; }
 
@@ -72,7 +84,7 @@ input, button { font-size: 1rem; }
 }
 .hero-title {
   font-family: 'Instrument Serif', serif;
-  font-size: clamp(2.8rem, 5vw, 4.2rem);
+  font-size: clamp(2.4rem, 4.5vw, 4.2rem);
   font-weight: 400;
   color: #fff;
   line-height: 1.1;
@@ -106,6 +118,7 @@ input, button { font-size: 1rem; }
   justify-content: center;
   padding: 2rem;
   background: var(--surface);
+  overflow-y: auto;
 }
 .auth-card {
   width: 100%;
@@ -193,7 +206,9 @@ input, button { font-size: 1rem; }
 }
 .field-icon svg { width: 18px; height: 18px; }
 
-/* password field adjustments */
+[hidden] { display: none !important; }
+
+/* password field */
 .field-input[type="password"] { padding-right: 5.25rem; }
 .field-toggle {
   position: absolute; right: 2.6rem; top: 50%; transform: translateY(-50%);
@@ -267,31 +282,6 @@ input, button { font-size: 1rem; }
 .success-title { font-size: 1.1rem; font-weight: 700; margin-top: 1rem; }
 .success-text { font-size: .875rem; color: var(--text-sec); margin-top: .4rem; max-width: 30ch; }
 
-/* ── Main app layout ────────────────────────────────────────────────────── */
-.main-layout { min-height: 100vh; display: flex; flex-direction: column; }
-.app-header {
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 1rem 2rem;
-  border-bottom: 1px solid var(--border);
-  background: var(--bg);
-}
-.app-header .brand { color: var(--text); }
-.app-header .brand-logo { background: var(--primary-light); color: var(--primary); }
-.user-info { display: flex; align-items: center; gap: 1rem; font-size: .9rem; font-weight: 600; }
-.btn-logout {
-  padding: .45rem 1rem;
-  border: 1.5px solid var(--border);
-  border-radius: var(--radius-sm);
-  font-size: .85rem;
-  font-weight: 600;
-  color: var(--text-sec);
-  transition: all var(--transition);
-}
-.btn-logout:hover { border-color: var(--error); color: var(--error); }
-
-.app-main { flex: 1; display: flex; align-items: center; justify-content: center; }
-.welcome-msg { font-size: 1.25rem; font-weight: 600; color: var(--text-sec); }
-
 /* ── Toast notifications ────────────────────────────────────────────────── */
 #toast-container {
   position: fixed;
@@ -301,6 +291,7 @@ input, button { font-size: 1rem; }
   flex-direction: column;
   gap: .6rem;
   pointer-events: none;
+  max-width: calc(100vw - 2.5rem);
 }
 .toast {
   pointer-events: all;
@@ -315,6 +306,7 @@ input, button { font-size: 1rem; }
   animation: toastIn .3s cubic-bezier(0.34,1.56,0.64,1);
   position: relative;
   overflow: hidden;
+  word-break: break-word;
 }
 .toast::before {
   content: '';
@@ -334,7 +326,7 @@ input, button { font-size: 1rem; }
 .toast.toast-info .toast-icon    { color: var(--primary); }
 .toast.toast-warning .toast-icon { color: var(--warning); }
 
-.toast-body { flex: 1; }
+.toast-body { flex: 1; min-width: 0; }
 .toast-title { font-size: .875rem; font-weight: 700; }
 .toast-msg   { font-size: .8rem; color: var(--text-sec); margin-top: .15rem; line-height: 1.4; }
 
@@ -369,12 +361,18 @@ input, button { font-size: 1rem; }
 }
 .link:hover { color: var(--primary-hover); text-decoration: underline; }
 
-/* ── Responsive ─────────────────────────────────────────────────────────── */
+/* ── Responsive: Auth ───────────────────────────────────────────────────── */
 @media (max-width: 768px) {
   .auth-layout { grid-template-columns: 1fr; }
   .auth-left { display: none; }
-  .auth-right { padding: 1.5rem 1rem; background: var(--bg); }
-  .auth-card { box-shadow: none; border: none; padding: 1.5rem 0; }
-  #toast-container { top: auto; bottom: 1rem; right: 1rem; left: 1rem; }
-  .toast { max-width: 100%; }
+  .auth-right {
+    padding: 1.5rem 1rem;
+    background: var(--bg);
+    min-height: 100vh;
+    align-items: flex-start;
+    padding-top: 3rem;
+  }
+  .auth-card { box-shadow: none; border: none; padding: 1.5rem 0; max-width: 100%; }
+  #toast-container { top: auto; bottom: 1rem; right: .75rem; left: .75rem; max-width: 100%; }
+  .toast { max-width: 100%; min-width: 0; }
 }

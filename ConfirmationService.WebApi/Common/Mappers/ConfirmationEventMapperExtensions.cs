@@ -23,6 +23,8 @@ public static class ConfirmationEventMapperExtensions
     public static ConfirmationService.ConfirmationRespond ToAvro(this ConfirmationRespondEvent e) =>
         new()
         {
+            ReviewerId = e.ReviewerId.ToString(),
+            EntityId = e.EntityId.ToString(),
             ConfirmationId = e.ConfirmationId.ToString(),
             InitiatorId = e.InitiatorId.ToString(),
             IsAccepted = e.IsAccepted,

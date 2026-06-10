@@ -10,5 +10,5 @@ public class RespondToConfirmationRequest
     /// <summary>
     /// Причина отклонения (если IsAccepted = false)
     /// </summary>
-    public string RejectionReason { get; set; }
+    public string? RejectionReason { get; set; }
 }

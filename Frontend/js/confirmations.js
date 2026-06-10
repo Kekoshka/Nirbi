@@ -4,6 +4,7 @@ import { authApi }                            from './api.js';
 import { confirmationsApi }                   from './confirmationsApi.js';
 import { startNotifications, onNotification } from './notifications.js';
 import { CONFIRMATION_TYPES }  from './config.js';
+import { parseMetaData }       from './confirmationMeta.js';
 
 // Локальные лейблы статусов
 const STATUS_LABELS = {
@@ -68,12 +69,34 @@ function setLoading(btn, on) {
   if (!btn) return;
   btn.disabled = on;
   btn.classList.toggle('is-loading', on);
+  const lbl = btn.querySelector('.btn-label');
+  const sp  = btn.querySelector('.btn-spinner');
+  if (lbl) lbl.hidden = on;
+  if (sp)  sp.hidden  = !on;
+}
+
+// Имя задачи из обогащённого ответа Gateway (entityName),
+// с фолбэком на metaData.taskName (на случай не-обогащённых данных).
+function taskNameOf(c) {
+  const meta = parseMetaData(c.metaData);
+  return c.entityName ?? meta.taskName ?? '—';
+}
+
+// Имя «второй стороны» в зависимости от вкладки.
+// received → кто откликнулся (initiator); sent → кому отправлено (reviewer).
+function counterpartyOf(c, kind) {
+  const meta = parseMetaData(c.metaData);
+  return kind === 'received'
+    ? (c.initiatorUsername ?? meta.applicantUsername ?? '')
+    : (c.reviewerUsername  ?? '');
 }
 
 // ── Load data ────────────────────────────────────────────────────────────────
 async function loadAll() {
   if (!currentUserId) return;
   try {
+    // Gateway-агрегатор уже возвращает EnrichedConfirmationResponse:
+    // entityName + initiatorUsername + reviewerUsername. Доп. запросов не нужно.
     const [inc, out] = await Promise.all([
       confirmationsApi.getByReviewer(currentUserId).catch(() => []),
       confirmationsApi.getByInitiator(currentUserId).catch(() => []),
@@ -123,22 +146,17 @@ function render() {
 function renderCard(c, kind) {
   const status   = (c.status || '').toLowerCase();
 
-  // Gateway теперь возвращает entityName и initiatorUsername/reviewerUsername напрямую.
-  // Fallback на metaData — для совместимости с не-обогащёнными ответами.
-  const taskName = escapeHtml(c.entityName ?? c.metaData?.taskName ?? '—');
-  const who = escapeHtml(
-    kind === 'received'
-      ? (c.initiatorUsername ?? c.metaData?.applicantUsername ?? '')
-      : (c.reviewerUsername  ?? '')
-  );
+  // Имена приходят из Gateway-агрегатора напрямую.
+  const taskName = escapeHtml(taskNameOf(c));
+  const who      = escapeHtml(counterpartyOf(c, kind));
 
   const subtitle = kind === 'received'
     ? (who ? `От: <strong>${who}</strong>` : 'От пользователя')
-    : `Заявка на: <strong>${taskName}</strong>`;
+    : (who ? `Организатор: <strong>${who}</strong>` : `Заявка на: <strong>${taskName}</strong>`);
 
   const headline = kind === 'received'
     ? `Заявка на задачу «${taskName}»`
-    : 'Ваш отклик';
+    : `Ваш отклик на «${taskName}»`;
 
   const reasonRow = (status === 'rejected' && c.rejectionReason)
     ? `<div class="conf-row conf-reason"><span>Причина:</span> ${escapeHtml(c.rejectionReason)}</div>`
@@ -150,14 +168,17 @@ function renderCard(c, kind) {
       actions = `
         <button class="conf-btn conf-btn-accept" data-action="accept" data-id="${c.id}">
           <span class="btn-label">Принять</span>
+          <span class="btn-spinner" hidden></span>
         </button>
         <button class="conf-btn conf-btn-reject" data-action="reject" data-id="${c.id}">
           <span class="btn-label">Отклонить</span>
+          <span class="btn-spinner" hidden></span>
         </button>`;
     } else {
       actions = `
         <button class="conf-btn conf-btn-revoke" data-action="revoke" data-id="${c.id}">
           <span class="btn-label">Отозвать</span>
+          <span class="btn-spinner" hidden></span>
         </button>`;
     }
   }
@@ -188,14 +209,18 @@ function bindActions() {
     btn.addEventListener('click', async () => {
       const id     = btn.dataset.id;
       const action = btn.dataset.action;
+
+      // Отклонение — через модалку с необязательной причиной
+      if (action === 'reject') {
+        openRejectModal(id);
+        return;
+      }
+
       setLoading(btn, true);
       try {
         if (action === 'accept') {
           await confirmationsApi.respond(id, true);
           toast.success('Заявка принята');
-        } else if (action === 'reject') {
-          await confirmationsApi.respond(id, false, 'Отклонено организатором');
-          toast.info('Заявка отклонена');
         } else if (action === 'revoke') {
           await confirmationsApi.revoke(id, currentUserId);
           toast.info('Заявка отозвана');
@@ -210,7 +235,6 @@ function bindActions() {
   });
 
   // Клик по карточке → открыть связанную задачу
-  // Сейчас поддерживаются только задачи; в будущем можно расширить по confirmationType
   listEl.querySelectorAll('.conf-card-clickable').forEach(card => {
     card.addEventListener('click', e => {
       // Не переходим, если пользователь кликнул на кнопку действия
@@ -222,6 +246,51 @@ function bindActions() {
     });
   });
 }
+
+// ── Reject reason modal ────────────────────────────────────────────────────────
+const modalReject    = document.getElementById('modal-reject');
+const rejectReasonEl  = document.getElementById('reject-reason');
+const btnConfirmReject = document.getElementById('btn-confirm-reject');
+const btnCancelReject  = document.getElementById('btn-cancel-reject');
+let pendingRejectId = null;
+
+function openRejectModal(id) {
+  pendingRejectId = id;
+  if (rejectReasonEl) rejectReasonEl.value = '';
+  if (modalReject) {
+    modalReject.hidden = false;
+    document.body.style.overflow = 'hidden';
+    setTimeout(() => rejectReasonEl?.focus(), 50);
+  }
+}
+function closeRejectModal() {
+  if (modalReject) modalReject.hidden = true;
+  document.body.style.overflow = '';
+  pendingRejectId = null;
+}
+
+btnCancelReject?.addEventListener('click', closeRejectModal);
+modalReject?.addEventListener('click', e => { if (e.target === modalReject) closeRejectModal(); });
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && modalReject && !modalReject.hidden) closeRejectModal();
+});
+
+btnConfirmReject?.addEventListener('click', async () => {
+  if (!pendingRejectId) return;
+  const reason = (rejectReasonEl?.value || '').trim();
+  setLoading(btnConfirmReject, true);
+  try {
+    // Причина необязательна: пустую отправляем как null
+    await confirmationsApi.respond(pendingRejectId, false, reason || null);
+    toast.info('Заявка отклонена');
+    closeRejectModal();
+    await loadAll();
+  } catch (e) {
+    toast.error(e.message || 'Не удалось отклонить заявку');
+  } finally {
+    setLoading(btnConfirmReject, false);
+  }
+});
 
 // ── Tabs ─────────────────────────────────────────────────────────────────────
 document.querySelectorAll('#conf-tabs .toggle-btn').forEach(btn => {
@@ -245,16 +314,21 @@ document.getElementById('btn-logout').addEventListener('click', async () => {
 });
 
 // ── SignalR real-time ────────────────────────────────────────────────────────
+// Payload приходит напрямую от ConfirmationService (мимо агрегатора), поэтому
+// имена/название берём из metaData (она здесь — JSON-строка или объект).
+// Точные имена в любом случае подтянет последующий loadAll() из агрегатора.
 onNotification('ShowConfirmationCreated', payload => {
-  const applicant = payload?.metaData?.applicantUsername || 'Пользователь';
-  const taskName  = payload?.metaData?.taskName || '';
+  const meta = parseMetaData(payload?.metaData);
+  const applicant = meta.applicantUsername || payload?.initiatorUsername || 'Пользователь';
+  const taskName  = meta.taskName || payload?.entityName || '';
   toast.info(`${applicant} откликнулся${taskName ? ` на «${taskName}»` : ''}`);
   loadAll();
 });
 
 onNotification('ShowConfirmationRespond', payload => {
+  const meta = parseMetaData(payload?.metaData);
   const status = (payload?.status || '').toLowerCase();
-  const taskName = payload?.metaData?.taskName || '';
+  const taskName = meta.taskName || payload?.entityName || '';
   if (status === 'accepted')      toast.success(`Заявка принята${taskName ? ` («${taskName}»)` : ''}`);
   else if (status === 'rejected') toast.warning(`Заявка отклонена${taskName ? ` («${taskName}»)` : ''}`);
   else                            toast.info('Ответ на заявку получен');
@@ -262,8 +336,9 @@ onNotification('ShowConfirmationRespond', payload => {
 });
 
 onNotification('ShowConfirmationRevoked', payload => {
-  const applicant = payload?.metaData?.applicantUsername || 'Пользователь';
-  const taskName  = payload?.metaData?.taskName || '';
+  const meta = parseMetaData(payload?.metaData);
+  const applicant = meta.applicantUsername || payload?.initiatorUsername || 'Пользователь';
+  const taskName  = meta.taskName || payload?.entityName || '';
   toast.info(`${applicant} отозвал заявку${taskName ? ` на «${taskName}»` : ''}`);
   loadAll();
 });

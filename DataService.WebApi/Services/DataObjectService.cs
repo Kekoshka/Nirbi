@@ -243,6 +243,85 @@ public sealed class DataObjectService : IDataObjectService
         await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
     }
 
+    public async Task<List<CollectionPreviewDto>> GetCollectionPreviewsAsync(
+    IReadOnlyCollection<Guid> collectionIds,
+    CancellationToken cancellationToken = default)
+    {
+        if (collectionIds is null || collectionIds.Count == 0)
+            return [];
+
+        var currentUserId = _currentUserService.GetUserId();
+
+        // ”бираем дубликаты, чтобы не делать лишних запросов к хранилищу
+        var ids = collectionIds.Distinct().ToList();
+
+        // “€нем коллекции вместе с файлами и владельцами одним запросом.
+        // ‘ильтр доступа повтор€ет ListByCollectionAsync: пускаем коллекцию,
+        // если пользователь Ч владелец, либо в ней есть публичный/его файл.
+        var collections = await _db.FileCollections.AsNoTracking()
+            .Include(c => c.Owners)
+            .Include(c => c.Files)
+                .ThenInclude(f => f.Owners)
+            .Where(c => ids.Contains(c.Id) &&
+                (
+                    c.Owners.Any(o => o.UserId == currentUserId) ||
+                    c.Files.Any(f => f.IsPublic) ||
+                    c.Files.Any(f => f.Owners.Any(o => o.UserId == currentUserId))
+                ))
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        if (collections.Count == 0)
+            return [];
+
+        // ƒл€ каждой коллекции выбираем первый доступный файл по SortOrder.
+        var picks = new List<(Guid CollectionId, StoredFile File)>();
+        foreach (var collection in collections)
+        {
+            var isOwner = collection.Owners.Any(o => o.UserId == currentUserId);
+
+            var visibleFiles = isOwner
+                ? collection.Files
+                : collection.Files.Where(f => f.IsPublic || f.Owners.Any(o => o.UserId == currentUserId));
+
+            var first = visibleFiles.OrderBy(f => f.SortOrder).FirstOrDefault();
+            if (first is not null)
+                picks.Add((collection.Id, first));
+        }
+
+        if (picks.Count == 0)
+            return [];
+
+        // ѕараллельно скачиваем байты только выбранных файлов из S3.
+        var previewTasks = picks.Select(async pick =>
+        {
+            try
+            {
+                await using var stream = await _storage
+                    .GetObjectStreamAsync(pick.File.StorageKey, cancellationToken)
+                    .ConfigureAwait(false);
+
+                using var ms = new MemoryStream();
+                await stream.CopyToAsync(ms, cancellationToken).ConfigureAwait(false);
+
+                return new CollectionPreviewDto(
+                    pick.CollectionId, 
+                    pick.File.Id, 
+                    pick.File.ContentType, 
+                    Convert.ToBase64String(ms.ToArray()));
+            }
+            catch
+            {
+                // ≈сли конкретный файл недоступен в хранилище Ч пропускаем,
+                // карточка просто останетс€ без превью.
+                return null;
+            }
+        });
+
+        var previews = await Task.WhenAll(previewTasks).ConfigureAwait(false);
+        return previews.Where(p => p is not null).Select(p => p!).ToList();
+    }
+
     /// <summary>
     /// ƒл€ standalone-файла провер€ем его собственных Owners.
     /// ƒл€ файла в коллекции Ч провер€ем Owners родительской коллекции.

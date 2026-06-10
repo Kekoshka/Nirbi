@@ -134,20 +134,27 @@ export const authApi = {
   },
 };
 
-// ── User lookup — для обогащения данных задач/подтверждений именами ──────────
+// ── User lookup — для обогащения данных задач именами организаторов ──────────
+// Подтверждения обогащает Gateway-агрегатор (entityName/initiatorUsername/reviewerUsername),
+// поэтому usersApi здесь нужен ТОЛЬКО для имён владельцев задач на карточках.
+//
+// Контракт AuthService (swagger):
+//   GET /api/Users/users/{id}                  → UserProfile
+//   GET /api/Users/users/fullnames?ids=&ids=   → [{ id, firstName, secondName, lastName }]
+//   GET /api/Users/search?username=            → [{ userId, username }]
 export const usersApi = {
   // Получить пользователя по ID
   getById(userId) {
-    return api.get(`/api/Auth/users/${userId}`);
+    return api.get(`/api/Users/users/${userId}`);
   },
 
-  // Получить список пользователей по массиву ID (батчевый запрос)
-  // Бэкенд: POST /api/Auth/users/batch с телом { ids: string[] }
-  // Возвращает UserSearchResultDto[]: [{ userId, username }]
+  // Батч ФИО по массиву ID: GET /api/Users/users/fullnames?ids=..&ids=..
+  // Возвращает [{ id, firstName, secondName, lastName }]
   async getByIds(ids) {
     if (!ids || !ids.length) return [];
+    const qs = ids.map(id => `ids=${encodeURIComponent(id)}`).join('&');
     try {
-      const result = await api.post('/api/Auth/users/batch', { ids });
+      const result = await api.get(`/api/Users/users/fullnames?${qs}`);
       return Array.isArray(result) ? result : [];
     } catch (e) {
       console.warn('[usersApi] getByIds failed:', e.message);
@@ -155,14 +162,20 @@ export const usersApi = {
     }
   },
 
-  // Удобный хелпер: возвращает Map<userId, username> для быстрого lookup
+  // Удобный хелпер: возвращает Map<userId, displayName> для быстрого lookup.
+  // displayName собираем из ФИО; если его нет — username/userId как фолбэк.
   async getUsernameMap(ids) {
     const unique = [...new Set((ids || []).filter(Boolean).map(String))];
     if (!unique.length) return new Map();
     const users = await this.getByIds(unique);
     const map = new Map();
     users.forEach(u => {
-      if (u?.userId) map.set(String(u.userId), u.username || u.userId);
+      const id = u?.id ?? u?.userId;
+      if (!id) return;
+      const display = [u.lastName, u.firstName, u.secondName].filter(Boolean).join(' ')
+                   || u.username
+                   || String(id);
+      map.set(String(id), display);
     });
     return map;
   },

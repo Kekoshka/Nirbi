@@ -38,6 +38,10 @@ public interface IDataObjectService
     Task DeleteFileAsync(
         Guid fileId,
         CancellationToken cancellationToken = default);
+    Task<List<CollectionPreviewDto>> GetCollectionPreviewsAsync(
+        IReadOnlyCollection<Guid> collectionIds,
+        CancellationToken cancellationToken = default);
+
 }
 
 public sealed record FileDownloadResult(Stream Stream, string ContentType, string? FileDownloadName);

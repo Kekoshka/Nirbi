@@ -83,6 +83,30 @@
   </main>
 </div>
 
+<!-- ── Reject reason modal ─────────────────────────────────────────────────── -->
+<div class="modal-overlay" id="modal-reject" hidden>
+  <div class="modal modal-confirm-inner" style="text-align:left;align-items:stretch;max-width:440px;">
+    <h3 class="confirm-title" style="text-align:center;">Отклонить заявку?</h3>
+    <p class="confirm-text" style="text-align:center;">
+      Вы можете указать причину отклонения — это необязательно.
+    </p>
+    <div class="field-group" style="margin-top:1.1rem;">
+      <label class="field-label" for="reject-reason">
+        Причина отклонения <span class="hint-text">— необязательно</span>
+      </label>
+      <textarea class="field-input field-textarea" id="reject-reason" rows="3"
+        placeholder="Например: недостаточно опыта для этой задачи"></textarea>
+    </div>
+    <div class="confirm-actions" style="margin-top:1.1rem;">
+      <button class="btn-secondary" id="btn-cancel-reject">Отмена</button>
+      <button class="btn-danger" id="btn-confirm-reject">
+        <span class="btn-label">Отклонить</span>
+        <span class="btn-spinner" hidden></span>
+      </button>
+    </div>
+  </div>
+</div>
+
 <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.7/signalr.min.js"></script>
 <script type="module" src="js/confirmations.js"></script>
 </body>
