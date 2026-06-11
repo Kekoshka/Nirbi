@@ -227,6 +227,18 @@ public class KeycloakIntegrationService : IKeycloakIntegrationService
         return new UserSearchResultDto(Guid.Parse(user.Id), user.Username);
     }
 
+    public async Task<UserFields> GetUserProfileSchemaAsync(CancellationToken cancellationToken = default)
+    {
+        var adminToken = await GetAdminTokenAsync(cancellationToken);
+
+        UserFields upConfig = await _keycloakClient.GetUserProfileConfigurationAsync(
+            _keycloakOptions.Realm,
+            $"Bearer {adminToken}",
+            cancellationToken);
+
+        return upConfig;
+    }
+
 
     // ── helpers ───────────────────────────────────────────────────────────────
 

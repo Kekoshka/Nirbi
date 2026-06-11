@@ -105,5 +105,14 @@ namespace AuthService.WebApi.External.Keycloak
             [Header("Authorization")] string authHeader,
             [Body] KeycloakUserDto user,
             CancellationToken cancellationToken);
+
+        /// <summary>
+        /// Получает схему пользовательского профиля (User Profile) для указанного реалма.
+        /// </summary>
+        [Get("/admin/realms/{realm}/users/profile")]
+        Task<UserFields> GetUserProfileConfigurationAsync(
+            string realm,
+            [Header("Authorization")] string authHeader,
+            CancellationToken cancellationToken = default);
     }
 }

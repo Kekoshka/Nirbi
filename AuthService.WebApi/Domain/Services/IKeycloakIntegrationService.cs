@@ -13,5 +13,6 @@ namespace AuthService.WebApi.Domain.Services
         Task<IEnumerable<UserSearchResultDto>> SearchUsersByUsernameAsync(string username, CancellationToken cancellationToken = default);
         Task<KeycloakUserDto> GetUserInfo(string id, CancellationToken cancellationToken = default);
         Task<bool> UpdateUser(UpdateUserRequest data, CancellationToken cancellationToken = default);
+        Task<UserFields> GetUserProfileSchemaAsync(CancellationToken cancellationToken = default);
     }
 }

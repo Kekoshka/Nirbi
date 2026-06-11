@@ -105,6 +105,35 @@ namespace AuthService.WebApi.External.Keycloak.Models
             };
         }
 
+        public static Dictionary<string, string> ToFieldDict(this KeycloakUserDto dto, List<string> fields)
+        {
+            if (dto == null) return null;
+
+            Dictionary<string, string> response = new Dictionary<string, string>();
+            foreach (var field in fields)
+            {
+                switch (field)
+                {
+                    case "firstName":
+                        response.Add(field, dto.FirstName);
+                        break;
+                    case "lastName":
+                        response.Add(field, dto.LastName);
+                        break;
+                    case "email":
+                        response.Add(field, dto.Email);
+                        break;
+                    case "username":
+                        response.Add(field, dto.Username);
+                        break;
+                    default:
+                        response.Add(field, GetAttributeValue(dto.Attributes, field));
+                        break;
+                }
+            }
+            return response;
+        }
+
         private static string? GetAttributeValue(Dictionary<string, List<string>>? attributes, string key)
         {
             if (attributes != null && attributes.TryGetValue(key, out var values) && values != null && values.Count > 0)
@@ -148,6 +177,9 @@ namespace AuthService.WebApi.External.Keycloak.Models
             UpdateAttributeForPartialUpdate(updateDto.Attributes, "educationStartYear", request.EducationStartYear);
             UpdateAttributeForPartialUpdate(updateDto.Attributes, "educationEndYear", request.EducationEndYear);
             UpdateAttributeForPartialUpdate(updateDto.Attributes, "educationField", request.EducationField);
+            UpdateAttributeForPartialUpdate(updateDto.Attributes, "vk", request.vk);
+            UpdateAttributeForPartialUpdate(updateDto.Attributes, "tg", request.tg);
+            UpdateAttributeForPartialUpdate(updateDto.Attributes, "max", request.max);
 
             if (!string.IsNullOrEmpty(request.NewPassword))
             {
@@ -198,6 +230,9 @@ namespace AuthService.WebApi.External.Keycloak.Models
         public string? EducationStartYear { get; set; }
         public string? EducationEndYear { get; set; }
         public string? EducationField { get; set; }
+        public string? vk { get; set; }
+        public string? tg { get; set; }
+        public string? max { get; set; }
     }
 
     public class UpdateUserRequest : UserProfile
@@ -216,5 +251,17 @@ namespace AuthService.WebApi.External.Keycloak.Models
 
         [JsonPropertyName("temporary")]
         public bool Temporary { get; set; } = false;
+    }
+
+    public class UserFields
+    {
+        [JsonPropertyName("attributes")]
+        public List<UserField> Attributes { get; set; }
+    }
+
+    public class UserField
+    {
+        [JsonPropertyName("name")]
+        public string Name { get; set; }
     }
 }

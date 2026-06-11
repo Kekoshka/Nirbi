@@ -43,9 +43,9 @@ public class UsersController : ControllerBase
     /// <summary>
     /// Получение информации о пользователе по ID
     /// </summary>
-    [HttpGet("users/{id}")]
+    [HttpGet("{id}")]
     public async Task<IActionResult> GetUserById(
-        string id,
+        string id, [FromQuery] List<string>? fields,
         CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(id))
@@ -65,15 +65,20 @@ public class UsersController : ControllerBase
             return NotFound($"User with id '{id}' not found.");
         }
 
-        var response = KeycloakUserExtensions.ToUserProfile(user);
-
-        return Ok(response);
+        if (fields == null || fields.Count == 0)
+        {
+            return Ok(KeycloakUserExtensions.ToUserProfile(user));
+        }
+        else
+        {
+            return Ok(KeycloakUserExtensions.ToFieldDict(user, fields));
+        }
     }
 
     /// <summary>
     /// Изменение информации о пользователе по ID
     /// </summary>
-    [HttpPut("users/{id}")]
+    [HttpPut("{id}")]
     public async Task<IActionResult> UpdateUserById(
         string id, [FromBody] UpdateUserRequest data, 
         CancellationToken cancellationToken)
@@ -95,9 +100,31 @@ public class UsersController : ControllerBase
     }
 
     /// <summary>
+    /// Изменение информации о контактах пользователя по ID
+    /// </summary>
+    [HttpPut("{id}/contacts")]
+    public async Task<IActionResult> GetUserContactsById(
+        string id,CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(id))
+        {
+            return BadRequest("Id parameter is required.");
+        }
+
+        if (!Guid.TryParseExact(id, "D", out _))
+        {
+            return BadRequest("Id must be a valid GUID in format xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx");
+        }
+
+        var response = await _keycloakService.GetUserInfo(id, cancellationToken);
+
+        return Ok(response);
+    }
+
+    /// <summary>
     /// Получение ФИО пользователей по списку ID
     /// </summary>
-    [HttpGet("users/fullnames")]
+    [HttpGet("fullnames")]
     public async Task<IActionResult> GetUsersFullNames(
         [FromQuery] List<string> ids,
         CancellationToken cancellationToken)
@@ -129,5 +156,15 @@ public class UsersController : ControllerBase
         }
 
         return Ok(results);
+    }
+
+    /// <summary>
+    /// Получение списка доступных полей
+    /// </summary>
+    [HttpGet("fields")]
+    public async Task<IActionResult> GetUsersField(CancellationToken cancellationToken)
+    {
+        UserFields v = await _keycloakService.GetUserProfileSchemaAsync(cancellationToken).ConfigureAwait(false);
+        return Ok(v.Attributes.ConvertAll(x => x.Name).ToArray());
     }
 }   
