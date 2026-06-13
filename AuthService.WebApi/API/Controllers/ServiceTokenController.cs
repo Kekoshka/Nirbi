@@ -1,5 +1,6 @@
 ﻿using AuthService.WebApi.API.Requests;
 using AuthService.WebApi.Domain.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace AuthService.WebApi.API.Controllers
@@ -68,6 +69,13 @@ namespace AuthService.WebApi.API.Controllers
         {
             await _serviceTokenService.RevokeServiceAsync(serviceId, cancellationToken);
             return Ok();
+        }
+
+        [HttpGet("health")]
+        [AllowAnonymous]
+        public async Task<IActionResult> HealthGet()
+        {
+            return Ok(new { status = "healthy" });
         }
     }
 }

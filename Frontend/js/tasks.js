@@ -1,12 +1,13 @@
 import { toast }                              from './toast.js';
 import { tokenStore }                         from './tokenStore.js';
-import { authApi }                            from './api.js';
+import { authApi, usersApi }                  from './api.js';
 import { tasksApi }                           from './tasksApi.js';
 import { dataApi }                            from './dataApi.js';
 import { confirmationsApi }                   from './confirmationsApi.js';
 import { startNotifications, onNotification } from './notifications.js';
 import { CONFIRMATION_TYPES,
          CONFIRMATION_DEFAULT_EXPIRATION_HOURS } from './config.js';
+import { parseMetaData }                      from './confirmationMeta.js';
 
 // ── Guard: redirect to login if no session ───────────────────────────────────
 if (!tokenStore.hasSession()) {
@@ -26,6 +27,11 @@ let formMarker  = null;
 let mainMarkers = [];
 let removedImageIds = new Set();  // IDs картинок, помеченных на удаление в форме редактирования
 let editingTask    = null;         // полные данные задачи при редактировании (включая images)
+let userNameCache  = new Map();    // userId → username (загружается батчевым запросом к AuthService)
+let previewCache   = new Map();    // taskId → { data, contentType } | null (null = превью нет)
+let previewRunId   = 0;            // токен текущей сессии ленивой загрузки (отмена при ре-рендере)
+
+const PREVIEW_BATCH_SIZE = 8;      // сколько превью догружаем за один запрос
 
 // Бэкенд использует статус "Created" как начальный, а не "Pending".
 // Нормализуем оба варианта — иначе кнопки действий не появятся.
@@ -35,6 +41,17 @@ function isPending(status) {
 }
 
 const currentUserId = tokenStore.getUserId();
+
+// Достаём название задачи / имя откликнувшегося из подтверждения.
+// Gateway-агрегатор отдаёт entityName/initiatorUsername; metaData — фолбэк.
+function confTaskName(c) {
+  const meta = parseMetaData(c?.metaData);
+  return c?.entityName ?? meta.taskName ?? '';
+}
+function confApplicant(c) {
+  const meta = parseMetaData(c?.metaData);
+  return c?.initiatorUsername ?? meta.applicantUsername ?? '';
+}
 
 // ── DOM refs ─────────────────────────────────────────────────────────────────
 const tasksGrid      = document.getElementById('tasks-grid');
@@ -49,6 +66,7 @@ const modeToggle     = document.getElementById('mode-toggle');
 const modalDetail    = document.getElementById('modal-detail');
 const modalForm      = document.getElementById('modal-form');
 const modalConfirm   = document.getElementById('modal-confirm');
+const modalReject    = document.getElementById('modal-reject');
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 function statusLabel(s) {
@@ -102,7 +120,9 @@ function isOwner(task) {
 }
 
 function ownerBadge(task) {
-  return isOwner(task) ? 'Вы' : 'Организатор';
+  if (isOwner(task)) return 'Вы';
+  const name = getOwnerName(task);
+  return name || 'Организатор';
 }
 
 // ── Image lightbox ──────────────────────────────────────────────────────────
@@ -135,7 +155,7 @@ function closeLightbox() {
 })();
 
 function setLoading(btnId, loading) {
-  const btn = document.getElementById(btnId);
+  const btn = typeof btnId === 'string' ? document.getElementById(btnId) : btnId;
   if (!btn) return;
   btn.disabled = loading;
   const l = btn.querySelector('.btn-label');
@@ -143,6 +163,47 @@ function setLoading(btnId, loading) {
   if (l) l.hidden = loading;
   if (s) s.hidden = !loading;
 }
+
+// ── Reject reason modal (shared) ───────────────────────────────────────────────
+// Открывается из быстрых действий (панель уведомлений и actionable-toast).
+// onConfirm(reason) вызывается с текстом причины (или '' если пусто).
+const rejectReasonEl   = document.getElementById('reject-reason');
+const btnConfirmReject = document.getElementById('btn-confirm-reject');
+const btnCancelReject  = document.getElementById('btn-cancel-reject');
+let _rejectOnConfirm = null;
+
+function openRejectModal(onConfirm) {
+  _rejectOnConfirm = onConfirm;
+  if (rejectReasonEl) rejectReasonEl.value = '';
+  if (modalReject) {
+    modalReject.hidden = false;
+    document.body.style.overflow = 'hidden';
+    setTimeout(() => rejectReasonEl?.focus(), 50);
+  }
+}
+function closeRejectModal() {
+  if (modalReject) modalReject.hidden = true;
+  document.body.style.overflow = '';
+  _rejectOnConfirm = null;
+}
+
+btnCancelReject?.addEventListener('click', closeRejectModal);
+modalReject?.addEventListener('click', e => { if (e.target === modalReject) closeRejectModal(); });
+
+btnConfirmReject?.addEventListener('click', async () => {
+  if (!_rejectOnConfirm) { closeRejectModal(); return; }
+  const reason = (rejectReasonEl?.value || '').trim();
+  const cb = _rejectOnConfirm;
+  setLoading(btnConfirmReject, true);
+  try {
+    await cb(reason);
+    closeRejectModal();
+  } catch (e) {
+    toast.error(e.message || 'Не удалось отклонить заявку');
+  } finally {
+    setLoading(btnConfirmReject, false);
+  }
+});
 
 // ── Map initialisation ────────────────────────────────────────────────────────
 function initMainMap() {
@@ -194,12 +255,42 @@ async function loadTasks() {
 
     const data = await tasksApi.getAll(100) || [];
     allTasks = Array.isArray(data) ? data : [];
+
+    // Батчевый запрос имён организаторов — один запрос на всех
+    await enrichOwnerNames(allTasks);
+
     renderTasks();
   } catch (e) {
     toast.error('Не удалось загрузить задачи');
     tasksGrid.innerHTML = '';
     emptyState.hidden = false;
   }
+}
+
+// ── Owner name enrichment ──────────────────────────────────────────────────────
+// Собираем уникальные owner ID из задач, которых ещё нет в кэше,
+// и запрашиваем их имена одним батчевым вызовом к AuthService.
+async function enrichOwnerNames(tasks) {
+  const missing = [...new Set(
+    tasks
+      .map(t => getOwnerId(t))
+      .filter(id => id && !userNameCache.has(String(id)))
+      .map(String)
+  )];
+  if (!missing.length) return;
+  try {
+    const nameMap = await usersApi.getUsernameMap(missing);
+    nameMap.forEach((username, id) => userNameCache.set(id, username));
+  } catch (e) {
+    console.warn('[tasks] enrichOwnerNames failed:', e.message);
+  }
+}
+
+// Получить отображаемое имя организатора задачи из кэша
+function getOwnerName(task) {
+  const id = getOwnerId(task);
+  if (!id) return null;
+  return userNameCache.get(String(id)) || null;
 }
 
 // ── Render ────────────────────────────────────────────────────────────────────
@@ -241,14 +332,9 @@ function renderTasks() {
   emptyState.hidden = true;
 
   tasksGrid.innerHTML = tasks.map((t, i) => {
-    // previewImageData: base64 строка (без префикса data:)
-    // previewImageContentType: image/jpeg, image/png ...
-    const preview = t.previewImageData
-      ? `<div class="card-preview"><img src="data:${t.previewImageContentType || 'image/jpeg'};base64,${t.previewImageData}" alt="" /></div>`
-      : '';
     return `
-    <div class="task-card ${preview ? 'has-preview' : ''}" data-id="${t.id}" style="animation-delay:${i * 30}ms">
-      ${preview}
+    <div class="task-card has-preview" data-id="${t.id}" style="animation-delay:${i * 30}ms">
+      ${renderPreviewSlot(t.id)}
       <div class="card-top">
         <span class="card-title">${t.name || 'Без названия'}</span>
         <span class="status-badge ${statusClass(t.status)}">${statusLabel(t.status)}</span>
@@ -267,7 +353,7 @@ function renderTasks() {
         </div>
         ${isOwner(t)
           ? '<span class="card-owner-badge owner-self">Вы</span>'
-          : '<span class="card-owner-badge owner-other">Организатор</span>'}
+          : `<span class="card-owner-badge owner-other">${getOwnerName(t) || 'Организатор'}</span>`}
       </div>
     </div>`;
   }).join('');
@@ -275,6 +361,82 @@ function renderTasks() {
   // card click → detail
   tasksGrid.querySelectorAll('.task-card').forEach(card => {
     card.addEventListener('click', () => openDetail(card.dataset.id));
+  });
+
+  // Ленивая догрузка превью для видимых карточек, которых ещё нет в кэше
+  lazyLoadPreviews(tasks.map(t => t.id));
+}
+
+// Слот превью карточки: из кэша — готовая картинка; если кэш пуст —
+// placeholder-шиммер, который заполнит ленивая загрузка. null в кэше = нет картинки.
+function renderPreviewSlot(taskId) {
+  const cached = previewCache.get(String(taskId));
+  if (cached) {
+    return `<div class="card-preview" data-preview-for="${taskId}"><img src="data:${cached.contentType || 'image/jpeg'};base64,${cached.data}" alt="" /></div>`;
+  }
+  if (cached === null) {
+    // Точно знаем: картинки нет — слот не занимает места
+    return '';
+  }
+  // Ещё не знаем — показываем placeholder
+  return `<div class="card-preview card-preview-loading" data-preview-for="${taskId}"></div>`;
+}
+
+// Догрузка превью батчами. Для уже закэшированных id запросов не делаем.
+async function lazyLoadPreviews(taskIds) {
+  const runId = ++previewRunId;   // отменяем предыдущую сессию (например, при смене фильтра)
+
+  const pending = taskIds
+    .map(String)
+    .filter(id => !previewCache.has(id));
+  if (!pending.length) return;
+
+  for (let i = 0; i < pending.length; i += PREVIEW_BATCH_SIZE) {
+    if (runId !== previewRunId) return;  // началась новая сессия — выходим
+
+    const batch = pending.slice(i, i + PREVIEW_BATCH_SIZE);
+    let previews = [];
+    try {
+      previews = await tasksApi.getPreviews(batch) || [];
+    } catch (e) {
+      console.warn('[tasks] lazyLoadPreviews batch failed:', e.message);
+      // не прерываем — следующие батчи могут пройти
+      continue;
+    }
+
+    if (runId !== previewRunId) return;
+
+    // Раскладываем результат в кэш
+    const got = new Map();
+    previews.forEach(p => {
+      if (p?.taskId) got.set(String(p.taskId), {
+        data: p.previewImageData,
+        contentType: p.previewImageContentType,
+      });
+    });
+
+    // Помечаем весь батч в кэше: есть превью → объект, нет → null
+    batch.forEach(id => {
+      previewCache.set(id, got.get(id) ?? null);
+    });
+
+    applyPreviews(batch);
+  }
+}
+
+// Проставляем загруженные превью в уже отрисованные карточки (без ре-рендера всей сетки)
+function applyPreviews(taskIds) {
+  taskIds.forEach(id => {
+    const slot = tasksGrid.querySelector(`.card-preview[data-preview-for="${id}"]`);
+    if (!slot) return;
+    const cached = previewCache.get(String(id));
+    if (cached) {
+      slot.classList.remove('card-preview-loading');
+      slot.innerHTML = `<img src="data:${cached.contentType || 'image/jpeg'};base64,${cached.data}" alt="" />`;
+    } else {
+      // Превью нет — убираем слот целиком
+      slot.remove();
+    }
   });
 }
 
@@ -293,6 +455,11 @@ async function openDetail(taskId) {
   // populate header
   document.getElementById('detail-status-badge').textContent = statusLabel(task.status);
   document.getElementById('detail-title').textContent = task.name || 'Без названия';
+  // Подгружаем имя организатора в кэш, если его там ещё нет
+  const detailOwnerId = getOwnerId(task);
+  if (detailOwnerId && !userNameCache.has(String(detailOwnerId))) {
+    await enrichOwnerNames([task]);
+  }
   document.getElementById('detail-meta').innerHTML =
     `<span>Организатор: <strong>${ownerBadge(task)}</strong></span>
      <span>Волонтёров: ${task.numberVolunteers || 0}</span>
@@ -435,7 +602,9 @@ async function openDetail(taskId) {
     if (task.latitude && task.longitude) {
       detailMap = L.map('detail-map', { zoomControl: false, dragging: false, scrollWheelZoom: false })
         .setView([task.latitude, task.longitude], 14);
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(detailMap);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap',
+      }).addTo(detailMap);
       L.marker([task.latitude, task.longitude], { icon: makeIcon(markerColor(task.status)) }).addTo(detailMap);
     }
   }, 50);
@@ -543,7 +712,9 @@ function openForm(task = null) {
     const lat = task?.latitude  || 55.7558;
     const lng = task?.longitude || 37.6176;
     formMap = L.map('form-map').setView([lat, lng], 11);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(formMap);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© OpenStreetMap',
+    }).addTo(formMap);
 
     if (task?.latitude) {
       formMarker = L.marker([task.latitude, task.longitude], { icon: makeIcon('#014BAA'), draggable: true }).addTo(formMap);
@@ -667,6 +838,8 @@ document.getElementById('task-form').addEventListener('submit', async e => {
       }
 
       toast.success('Задача обновлена');
+      // Картинки задачи могли измениться — сбрасываем кэш превью, чтобы оно перезагрузилось
+      previewCache.delete(String(editingId));
     } else {
       const imageInput = document.getElementById('tf-images');
       const images = imageInput ? Array.from(imageInput.files) : [];
@@ -707,6 +880,7 @@ function openModal(el) {
   document.body.style.overflow = 'hidden';
 }
 function closeModal(el) {
+  if (!el) return;
   el.hidden = true;
   document.body.style.overflow = '';
 }
@@ -721,7 +895,10 @@ document.getElementById('btn-cancel-form').addEventListener('click',  () => clos
 
 // Esc key
 document.addEventListener('keydown', e => {
-  if (e.key === 'Escape') [modalDetail, modalForm, modalConfirm].forEach(closeModal);
+  if (e.key === 'Escape') {
+    [modalDetail, modalForm, modalConfirm].forEach(closeModal);
+    if (modalReject && !modalReject.hidden) closeRejectModal();
+  }
 });
 
 // ── Controls ──────────────────────────────────────────────────────────────────
@@ -767,7 +944,6 @@ function unreadCount() {
     if (dismissedIds.has(c.id)) return false;
     // Только входящие (где я reviewer) — это то, что требует моей реакции
     if (String(c.reviewerId) !== String(currentUserId)) return false;
-    const status = (c.status || '').toLowerCase();
     return isPending(c.status);
   }).length;
 }
@@ -790,6 +966,15 @@ function formatNotifDate(d) {
   } catch { return ''; }
 }
 
+// Выполнить reject с причиной из общей модалки
+function rejectWithReason(id) {
+  openRejectModal(async (reason) => {
+    await confirmationsApi.respond(id, false, reason || null);
+    toast.info('Заявка отклонена');
+    await loadConfirmations();
+  });
+}
+
 function renderNotifications() {
   if (!confirmations.length) {
     notifList.innerHTML = '<div class="notif-empty">Нет уведомлений</div>';
@@ -798,7 +983,6 @@ function renderNotifications() {
   }
 
   // В панели — только то, где я reviewer (входящие заявки на МОИ задачи).
-  // Свои отправленные/полученные ответы пользователь смотрит на /confirmations.html
   const incoming = confirmations.filter(c => String(c.reviewerId) === String(currentUserId));
 
   if (!incoming.length) {
@@ -814,8 +998,9 @@ function renderNotifications() {
 
   notifList.innerHTML = sorted.map(c => {
     const status    = (c.status || '').toLowerCase();
-    const taskName  = c.metaData?.taskName || 'задача';
-    const applicant = c.metaData?.applicantUsername || '';
+    // Название задачи и имя откликнувшегося — из агрегатора, с фолбэком на metaData
+    const taskName  = confTaskName(c) || 'задача';
+    const applicant = confApplicant(c);
 
     let title = '';
     let body  = '';
@@ -835,10 +1020,10 @@ function renderNotifications() {
       body  = `${applicant ? `<strong>${applicant}</strong> — задача` : 'Задача'} «${taskName}»`;
     } else if (status === 'rejected') {
       title = 'Вы отклонили заявку';
-      body  = `Задача «${taskName}»`;
+      body  = `${applicant ? `<strong>${applicant}</strong> — задача` : 'Задача'} «${taskName}»`;
     } else if (status === 'expired') {
       title = 'Заявка истекла';
-      body  = `Без ответа по задаче «${taskName}»`;
+      body  = `${applicant ? `<strong>${applicant}</strong> — без ответа` : 'Без ответа'} по задаче «${taskName}»`;
     } else {
       title = c.status || 'Заявка';
       body  = `По задаче «${taskName}»`;
@@ -862,14 +1047,18 @@ function renderNotifications() {
       ev.stopPropagation();
       const id     = b.dataset.id;
       const action = b.dataset.action;
+
+      // Отклонение — через модалку причины
+      if (action === 'reject') {
+        rejectWithReason(id);
+        return;
+      }
+
       b.disabled = true;
       try {
         if (action === 'accept') {
           await confirmationsApi.respond(id, true);
           toast.success('Заявка принята');
-        } else if (action === 'reject') {
-          await confirmationsApi.respond(id, false, 'Отклонено организатором');
-          toast.info('Заявка отклонена');
         } else if (action === 'revoke') {
           await confirmationsApi.revoke(id, currentUserId);
           toast.info('Заявка отозвана');
@@ -889,7 +1078,8 @@ function renderNotifications() {
 async function loadConfirmations() {
   if (!currentUserId) return;
   try {
-    // Параллельно: incoming + outgoing
+    // Параллельно: incoming + outgoing. Оба эндпоинта проходят через
+    // Gateway-агрегатор → уже содержат entityName/initiatorUsername/reviewerUsername.
     const [incoming, outgoing] = await Promise.all([
       confirmationsApi.getByReviewer(currentUserId).catch(() => []),
       confirmationsApi.getByInitiator(currentUserId).catch(() => []),
@@ -902,7 +1092,6 @@ async function loadConfirmations() {
     confirmations = [...inc, ...out].filter(c => {
       if (!c?.id || seen.has(c.id)) return false;
       seen.add(c.id);
-      // оставляем только нужный тип
       const t = c.confirmationType || '';
       return !t || t === CONFIRMATION_TYPES.RESPOND_TO_MINOR_TASK;
     });
@@ -932,9 +1121,12 @@ notifClear.addEventListener('click', () => {
 });
 
 // ── SignalR realtime hooks ────────────────────────────────────────────────────
+// Payload идёт напрямую от ConfirmationService (мимо агрегатора): имена берём
+// из metaData (JSON-строка/объект) + фолбэк на поля payload. Точные данные
+// в любом случае подтянет последующий loadConfirmations() из агрегатора.
 function handleIncomingConfirmation(payload) {
-  const taskName  = payload?.metaData?.taskName          || 'задаче';
-  const applicant = payload?.metaData?.applicantUsername || 'Кто-то';
+  const taskName  = confTaskName(payload) || 'задаче';
+  const applicant = confApplicant(payload) || 'Кто-то';
   const cId       = payload?.id;
 
   // Оптимистичное обновление локального состояния, чтобы панель тоже подхватила
@@ -971,14 +1163,14 @@ function handleIncomingConfirmation(payload) {
           label:   'Отклонить',
           variant: 'danger',
           onClick: async dismiss => {
-            try {
-              await confirmationsApi.respond(cId, false, 'Отклонено организатором');
+            // Открываем модалку с необязательной причиной; toast закрываем сразу,
+            // т.к. дальнейшее действие переходит в модалку.
+            dismiss();
+            openRejectModal(async (reason) => {
+              await confirmationsApi.respond(cId, false, reason || null);
               toast.info('Заявка отклонена');
               await loadConfirmations();
-              dismiss();
-            } catch (e) {
-              toast.error(e.message || 'Не удалось отклонить заявку');
-            }
+            });
           },
         },
       ],
@@ -994,11 +1186,12 @@ function handleIncomingConfirmation(payload) {
 
 function handleConfirmationRespond(payload) {
   const status   = (payload?.status || '').toLowerCase();
-  const taskName = payload?.metaData?.taskName || '';
+  const taskName = confTaskName(payload);
   if (status === 'accepted') {
     toast.success(`Ваша заявка принята${taskName ? ` («${taskName}»)` : ''}`);
   } else if (status === 'rejected') {
-    toast.warning(`Ваша заявка отклонена${taskName ? ` («${taskName}»)` : ''}`);
+    const reason = payload?.rejectionReason ? ` Причина: ${payload.rejectionReason}` : '';
+    toast.warning(`Ваша заявка отклонена${taskName ? ` («${taskName}»)` : ''}.${reason}`);
   } else {
     toast.info('Заявка обновлена');
   }
@@ -1006,8 +1199,8 @@ function handleConfirmationRespond(payload) {
 }
 
 function handleConfirmationRevoked(payload) {
-  const taskName  = payload?.metaData?.taskName          || '';
-  const applicant = payload?.metaData?.applicantUsername || '';
+  const taskName  = confTaskName(payload);
+  const applicant = confApplicant(payload);
   toast.info(
     `${applicant ? applicant : 'Пользователь'} отозвал заявку${taskName ? ` на «${taskName}»` : ''}`
   );

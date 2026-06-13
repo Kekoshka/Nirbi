@@ -13,6 +13,9 @@ public interface IMinorTaskAggregator
     Task<List<MinorTaskListItemResponse>> GetTasksWithPreviewAsync(int? limit, int? from, int? to, string? authHeader);
     Task<MinorTaskDetailResponse?> CreateTaskWithFilesAsync(CreateMinorTaskGatewayRequest request, string? authHeader);
 
+    // Ленивая подгрузка превью: по списку task ID → превью (base64) батчем.
+    Task<List<TaskPreviewResponse>> GetTaskPreviewsAsync(IReadOnlyCollection<Guid> taskIds, string? authHeader);
+
     // Возвращают HTTP статус для проброса в контроллер
     Task<System.Net.HttpStatusCode> UpdateTaskAsync(Guid minorTaskId, UpdateMinorTaskGatewayRequest request, string? authHeader);
     Task<System.Net.HttpStatusCode> UpdateTaskStatusAsync(Guid minorTaskId, Guid statusId, string? authHeader);
@@ -70,11 +73,15 @@ public class MinorTaskAggregator : IMinorTaskAggregator
     }
 
     // ─── GET /api/tasks ──────────────────────────────────────────────────────
+    //
+    //  БЫСТРЫЙ СПИСОК: картинки больше НЕ скачиваются здесь. Возвращаем только
+    //  метаданные задач + FileCollectionId, чтобы фронт догрузил превью отдельно
+    //  через GetTaskPreviewsAsync. Это убирает основную задержку (скачивание и
+    //  base64-кодирование байтов всех превью внутри одного ответа).
 
     public async Task<List<MinorTaskListItemResponse>> GetTasksWithPreviewAsync(int? limit, int? from, int? to, string? authHeader)
     {
         var taskClient = CreateClient("MinorTaskService", authHeader);
-        var dataClient = CreateClient("DataService", authHeader);
 
         var query = BuildQueryString(limit, from, to);
         var tasksResponse = await taskClient.GetAsync($"/api/tasks{query}");
@@ -83,48 +90,92 @@ public class MinorTaskAggregator : IMinorTaskAggregator
 
         var tasks = await DeserializeAsync<List<MinorTaskResponse>>(tasksResponse) ?? [];
 
-        // Параллельно получаем первый файл из каждой коллекции
-        var results = await Task.WhenAll(tasks.Select(async task =>
+        return tasks.Select(task => new MinorTaskListItemResponse
         {
-            var item = new MinorTaskListItemResponse
-            {
-                Id = task.Id,
-                Name = task.Name,
-                Description = task.Description,
-                Latitude = task.Latitude,
-                Longitude = task.Longitude,
-                NumberVolunteers = task.NumberVolunteers,
-                Encouragement = task.Encouragement,
-                Status = task.Status,
-                ConsumerId = task.ConsumerId
-            };
+            Id = task.Id,
+            Name = task.Name,
+            Description = task.Description,
+            Latitude = task.Latitude,
+            Longitude = task.Longitude,
+            NumberVolunteers = task.NumberVolunteers,
+            Encouragement = task.Encouragement,
+            Status = task.Status,
+            ConsumerId = task.ConsumerId,
+            FileCollectionId = task.FileCollectionId,   // превью догрузит фронт
+            // PreviewImageData / ContentType намеренно null в быстром списке
+        }).ToList();
+    }
 
-            if (task.FileCollectionId.HasValue)
+    // ─── POST /api/tasks/previews — батч-превью для ленивой загрузки ─────────
+    //
+    //  Фронт присылает пачку task ID (например, по 5–10). Мы:
+    //   1) резолвим их FileCollectionId (батч-запросом к MinorTaskService, если
+    //      есть /api/tasks/names-подобный батч; иначе — параллельными GET),
+    //   2) одним запросом к DataService /api/collections/previews получаем
+    //      первый файл каждой коллекции в base64,
+    //   3) сопоставляем обратно task ID → превью.
+
+    public async Task<List<TaskPreviewResponse>> GetTaskPreviewsAsync(
+        IReadOnlyCollection<Guid> taskIds, string? authHeader)
+    {
+        if (taskIds is null || taskIds.Count == 0) return [];
+
+        var taskClient = CreateClient("MinorTaskService", authHeader);
+        var dataClient = CreateClient("DataService", authHeader);
+
+        var ids = taskIds.Distinct().ToList();
+
+        // 1. task ID → FileCollectionId. Тянем задачи параллельно.
+        //    (Если в MinorTaskService появится батч-эндпоинт, отдающий
+        //     пары id/fileCollectionId — заменить этот блок на один запрос.)
+        var taskToCollection = new Dictionary<Guid, Guid>();
+        var fetches = ids.Select(async id =>
+        {
+            try
             {
-                var filesResponse = await dataClient.GetAsync($"/api/collections/{task.FileCollectionId}/files");
-                if (filesResponse.IsSuccessStatusCode)
-                {
-                    var files = await DeserializeAsync<List<FileMetadataDto>>(filesResponse) ?? [];
-                    var first = files.OrderBy(f => f.SortOrder).FirstOrDefault();
-                    if (first is not null)
-                    {
-                        // Скачиваем байты только первого файла
-                        var fileResponse = await dataClient.GetAsync($"/api/files/{first.Id}");
-                        if (fileResponse.IsSuccessStatusCode)
-                        {
-                            var bytes = await fileResponse.Content.ReadAsByteArrayAsync();
-                            item.PreviewImageData = Convert.ToBase64String(bytes);
-                            item.PreviewImageContentType = first.ContentType;
-                        }
-                        // Не падаем, если превью недоступно — карточка просто без картинки
-                    }
-                }
+                var resp = await taskClient.GetAsync($"/api/tasks/{id}");
+                if (!resp.IsSuccessStatusCode) return (id, (Guid?)null);
+                var task = await DeserializeAsync<MinorTaskResponse>(resp);
+                return (id, task?.FileCollectionId);
             }
+            catch { return (id, (Guid?)null); }
+        });
+        var resolved = await Task.WhenAll(fetches);
+        foreach (var (id, collId) in resolved)
+            if (collId.HasValue && collId.Value != Guid.Empty)
+                taskToCollection[id] = collId.Value;
 
-            return item;
-        }));
+        if (taskToCollection.Count == 0) return [];
 
-        return [.. results];
+        // 2. Батч-превью из DataService: collectionId → base64.
+        var collectionIds = taskToCollection.Values.Distinct().ToList();
+        var body = JsonSerializer.Serialize(new { CollectionIds = collectionIds }, _jsonOptions);
+        using var content = new StringContent(body, Encoding.UTF8, "application/json");
+
+        using var previewsResp = await dataClient.PostAsync("/api/collections/previews", content);
+        if (!previewsResp.IsSuccessStatusCode) return [];
+
+        var previews = await DeserializeAsync<List<CollectionPreviewDto>>(previewsResp) ?? [];
+        var byCollection = previews
+            .GroupBy(p => p.CollectionId)
+            .ToDictionary(g => g.Key, g => g.First());
+
+        // 3. Сопоставляем task ID → превью.
+        var result = new List<TaskPreviewResponse>(taskToCollection.Count);
+        foreach (var (taskId, collId) in taskToCollection)
+        {
+            if (byCollection.TryGetValue(collId, out var preview))
+            {
+                result.Add(new TaskPreviewResponse
+                {
+                    TaskId = taskId,
+                    PreviewImageData = preview.Data,
+                    PreviewImageContentType = preview.ContentType,
+                });
+            }
+        }
+
+        return result;
     }
 
     // ─── POST /api/tasks (с загрузкой файлов) ────────────────────────────────

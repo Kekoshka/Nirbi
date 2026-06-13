@@ -1,4 +1,4 @@
-﻿using MediatR;
+﻿    using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using MinorTaskService.WebApi.Common.DTO;

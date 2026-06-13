@@ -54,6 +54,31 @@ namespace AuthService.WebApi.External.Keycloak
             CancellationToken cancellationToken = default);
 
         /// <summary>
+        /// Получает список пользователей по phone
+        /// </summary>
+        [Get("/admin/realms/{realm}/users")]
+        Task<IEnumerable<KeycloakUserDto>> SearchUsersByPhoneAsync(
+            string realm,
+            [Header("Authorization")] string authHeader,
+            [Query] string phone,
+            CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// Получает пользователя по его уникальному идентификатору (UUID)
+        /// </summary>
+        /// <param name="realm">Название реалма</param>
+        /// <param name="id">ID пользователя в Keycloak (Guid/string)</param>
+        /// <param name="authHeader">Bearer токен администратора</param>
+        /// <param name="cancellationToken">Токен отмены</param>
+        /// <returns>Объект пользователя или null, если не найден</returns>
+        [Get("/admin/realms/{realm}/users/{id}")]
+        Task<KeycloakUserDto> GetUserByIdAsync(
+            string realm,
+            string id,
+            [Header("Authorization")] string authHeader,
+            CancellationToken cancellationToken = default);
+
+        /// <summary>
         /// Выполняет действия для пользователя (например, отправить email для сброса пароля)
         /// </summary>
         [Put("/admin/realms/{realm}/users/{userId}/execute-actions-email")]
@@ -73,24 +98,21 @@ namespace AuthService.WebApi.External.Keycloak
             [Body(BodySerializationMethod.UrlEncoded)] Dictionary<string, string> parameters,
             CancellationToken cancellationToken = default);
 
+        [Put("/admin/realms/{realm}/users/{id}")]
+        Task UpdateUserAsync(
+            string realm,
+            string id,
+            [Header("Authorization")] string authHeader,
+            [Body] KeycloakUserDto user,
+            CancellationToken cancellationToken);
+
         /// <summary>
-        /// Поиск пользователей по username
+        /// Получает схему пользовательского профиля (User Profile) для указанного реалма.
         /// </summary>
-        [Get("/admin/realms/{realm}/users")]
-        Task<IEnumerable<KeycloakUserDto>> SearchUsersByUsernameAsync(
+        [Get("/admin/realms/{realm}/users/profile")]
+        Task<UserFields> GetUserProfileConfigurationAsync(
             string realm,
             [Header("Authorization")] string authHeader,
-            [Query] string username,
             CancellationToken cancellationToken = default);
-
-        /// <summary>
-        /// Поиск username по id
-        /// </summary>
-        [Get("/admin/realms/{realm}/users/{userId}")]
-        Task<KeycloakUserDto> GetUserByIdAsync(
-            string realm, Guid userId,
-            [Header("Authorization")] string authorization,
-            CancellationToken ct = default);
-
     }
 }

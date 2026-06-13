@@ -26,8 +26,9 @@ function setLoading(btnId, loading) {
 }
 
 // ── Session helpers ──────────────────────────────────────────────────────────
-function saveSession(data, username) {
-  tokenStore.save(data.accessToken, data.refreshToken, data.userId, username);
+function saveSession(data, displayName) {
+  // Бэкенд возвращает: { userId, accessToken, refreshToken, tokenType, expiresIn }
+  tokenStore.save(data.accessToken, data.refreshToken, data.userId, displayName);
 }
 
 // ── Forms ────────────────────────────────────────────────────────────────────
@@ -40,6 +41,8 @@ document.getElementById('form-login').addEventListener('submit', async e => {
   try {
     const username = val('login-username');
     const data = await authApi.login(username, val('login-password'));
+    // При логине имя пользователя не возвращается бэкендом отдельно,
+    // сохраняем введённый логин как отображаемое имя
     saveSession(data, username);
     window.location.href = 'tasks.html';
   } catch (err) {
@@ -48,15 +51,23 @@ document.getElementById('form-login').addEventListener('submit', async e => {
   }
 });
 
-// Register
+// Register — новый контракт: FName, SName, LName, phone, email, password
 document.getElementById('form-register').addEventListener('submit', async e => {
   e.preventDefault();
   if (!validateRegister()) return;
   setLoading('btn-register', true);
   try {
-    const username = val('reg-username');
-    const data = await authApi.register(username, val('reg-email'), val('reg-password'));
-    saveSession(data, username);
+    const data = await authApi.register({
+      fName:    val('reg-fname'),
+      sName:    val('reg-sname'),
+      lName:    val('reg-lname'),
+      phone:    val('reg-phone'),
+      email:    val('reg-email'),
+      password: val('reg-password'),
+    });
+    // Бэкенд после регистрации сразу логинит и возвращает токены
+    const displayName = val('reg-email');
+    saveSession(data, displayName);
     window.location.href = 'tasks.html';
   } catch (err) {
     toast.error(err.message);

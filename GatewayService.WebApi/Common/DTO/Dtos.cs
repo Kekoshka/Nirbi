@@ -46,6 +46,10 @@ public class MinorTaskListItemResponse
 
     /// <summary>UUID пользователя-владельца — нужно фронту для "Мои задачи"</summary>
     public string? ConsumerId { get; set; }
+
+    /// <summary>UUID коллекции файлов — для ленивой подгрузки превью.</summary>
+    public Guid? FileCollectionId { get; set; }
+
 }
 
 /// <summary>Ответ для одной задачи — полный список изображений</summary>
@@ -181,4 +185,27 @@ public class FileMetadataDto
 
     /// <summary>Байты файла в base64</summary>
     public string? Data { get; set; }
+}
+
+/// <summary>Запрос фронта: получить превью для набора задач.</summary>
+public class TaskPreviewsRequest
+{
+    public List<Guid> TaskIds { get; set; } = [];
+}
+
+/// <summary>Превью одной задачи для фронта.</summary>
+public class TaskPreviewResponse
+{
+    public Guid TaskId { get; set; }
+    public string? PreviewImageData { get; set; }
+    public string? PreviewImageContentType { get; set; }
+}
+
+/// <summary>Ответ DataService POST /api/collections/previews (proxy-DTO).</summary>
+public class CollectionPreviewDto
+{
+    public Guid CollectionId { get; set; }
+    public Guid FileId { get; set; }
+    public string? ContentType { get; set; }
+    public string Data { get; set; } = string.Empty;
 }

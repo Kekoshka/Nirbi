@@ -111,4 +111,21 @@ public class MinorTasksController : ControllerBase
         var statusCode = await _aggregator.DeleteTaskParticipantAsync(minorTaskId, participantId, authHeader);
         return StatusCode((int)statusCode);
     }
+
+    /// <summary>
+    /// Батч-превью задач для ленивой загрузки. Фронт присылает пачку task ID
+    /// (по 5–10), получает для каждой первое изображение в base64.
+    /// Задачи без картинок в ответе отсутствуют.
+    /// </summary>
+    [HttpPost("previews")]
+    [ProducesResponseType(typeof(List<TaskPreviewResponse>), StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetTaskPreviews([FromBody] TaskPreviewsRequest request)
+    {
+        if (request?.TaskIds is null || request.TaskIds.Count == 0)
+            return Ok(Array.Empty<TaskPreviewResponse>());
+
+        var authHeader = Request.Headers.Authorization.ToString();
+        var result = await _aggregator.GetTaskPreviewsAsync(request.TaskIds, authHeader);
+        return Ok(result);
+    }
 }

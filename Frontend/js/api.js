@@ -104,20 +104,79 @@ async function authRequest(url, body) {
 }
 
 export const authApi = {
+  // Логин: username (email или телефон) + password
   login(username, password) {
     return authRequest('/api/Auth/login', { username, password });
   },
-  register(username, email, password) {
-    return authRequest('/api/Auth/register', { username, email, password });
+
+  // Регистрация: новый контракт бэкенда (FName, SName, LName, phone, email, password)
+  register({ fName, sName, lName, phone, email, password }) {
+    return authRequest('/api/Auth/register', {
+      FName:    fName,
+      SName:    sName,
+      LName:    lName,
+      phone,
+      email,
+      password,
+    });
   },
+
   forgotPassword(email) {
     return authRequest('/api/Auth/forgot-password', { email });
   },
+
   async logout(refreshToken) {
     await fetch(`${GATEWAY}/api/Auth/logout`, {
       method:  'POST',
       headers: { 'Content-Type': 'application/json' },
       body:    JSON.stringify({ refreshToken }),
     }).catch(() => {});
+  },
+};
+
+// ── User lookup — для обогащения данных задач именами организаторов ──────────
+// Подтверждения обогащает Gateway-агрегатор (entityName/initiatorUsername/reviewerUsername),
+// поэтому usersApi здесь нужен ТОЛЬКО для имён владельцев задач на карточках.
+//
+// Контракт AuthService (swagger):
+//   GET /api/Users/users/{id}                  → UserProfile
+//   GET /api/Users/users/fullnames?ids=&ids=   → [{ id, firstName, secondName, lastName }]
+//   GET /api/Users/search?username=            → [{ userId, username }]
+export const usersApi = {
+  // Получить пользователя по ID
+  getById(userId) {
+    return api.get(`/api/Users/users/${userId}`);
+  },
+
+  // Батч ФИО по массиву ID: GET /api/Users/users/fullnames?ids=..&ids=..
+  // Возвращает [{ id, firstName, secondName, lastName }]
+  async getByIds(ids) {
+    if (!ids || !ids.length) return [];
+    const qs = ids.map(id => `ids=${encodeURIComponent(id)}`).join('&');
+    try {
+      const result = await api.get(`/api/Users/users/fullnames?${qs}`);
+      return Array.isArray(result) ? result : [];
+    } catch (e) {
+      console.warn('[usersApi] getByIds failed:', e.message);
+      return [];
+    }
+  },
+
+  // Удобный хелпер: возвращает Map<userId, displayName> для быстрого lookup.
+  // displayName собираем из ФИО; если его нет — username/userId как фолбэк.
+  async getUsernameMap(ids) {
+    const unique = [...new Set((ids || []).filter(Boolean).map(String))];
+    if (!unique.length) return new Map();
+    const users = await this.getByIds(unique);
+    const map = new Map();
+    users.forEach(u => {
+      const id = u?.id ?? u?.userId;
+      if (!id) return;
+      const display = [u.lastName, u.firstName, u.secondName].filter(Boolean).join(' ')
+                   || u.username
+                   || String(id);
+      map.set(String(id), display);
+    });
+    return map;
   },
 };

@@ -18,6 +18,7 @@ builder.Services.Configure<ExternalServicesOptions>(
 builder.Services.Configure<DefaultDataOptions>(
     builder.Configuration.GetSection(nameof(DefaultDataOptions)));
 
+builder.Services.AddHostedService<HostedBase>();
 builder.Services.AddNirbiServiceAuth(builder.Configuration);
 builder.Services.AddRefit(builder.Configuration);
 

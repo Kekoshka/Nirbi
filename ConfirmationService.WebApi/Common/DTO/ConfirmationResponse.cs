@@ -20,7 +20,7 @@ public class ConfirmationResponse
 
     public DateTime? RespondedAt { get; set; }
 
-    public string RejectionReason { get; set; }
+    public string? RejectionReason { get; set; }
 
     public Dictionary<string, object> MetaData { get; set; }
 }

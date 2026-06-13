@@ -1,4 +1,5 @@
 using DataService.WebApi.Common.DTO;
+using DataService.WebApi.Interfaces;
 using DataService.WebApi.Mediator;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
@@ -63,5 +64,20 @@ public class CollectionsController : ControllerBase
     {
         await _mediator.Send(new DeleteCollectionCommand(id), cancellationToken);
         return NoContent();
+    }
+
+    [HttpPost("previews")]
+    public async Task<ActionResult<IReadOnlyList<CollectionPreviewDto>>> GetPreviews(
+        [FromBody] CollectionPreviewRequest request,
+        [FromServices] IDataObjectService dataObjectService,
+        CancellationToken cancellationToken)
+    {
+        if (request?.CollectionIds is null || request.CollectionIds.Count == 0)
+            return Ok(Array.Empty<CollectionPreviewDto>());
+
+        var previews = await dataObjectService.GetCollectionPreviewsAsync(
+            request.CollectionIds, cancellationToken);
+
+        return Ok(previews);
     }
 }

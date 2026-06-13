@@ -8,3 +8,12 @@ public record FileMetadataDto(
     long SizeBytes,
     string? OriginalFileName,
     DateTime CreatedAtUtc);
+
+public record class CollectionPreviewRequest(
+    List<Guid> CollectionIds);
+
+public record class CollectionPreviewDto(
+    Guid CollectionId,
+    Guid FileId,
+    string? ContentType,
+    string Data = "");

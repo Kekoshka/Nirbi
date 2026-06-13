@@ -6,6 +6,9 @@ public class ServiceAuthOptions
 
     public string AuthServiceBaseUrl { get; set; } = string.Empty;
     public string ClientId { get; set; } = string.Empty;
+    public string ServiceName { get; set; } = string.Empty;
+    public string Description { get; set; } = string.Empty;
+    public List<string> Scopes { get; set; } = new();
     public string ClientSecret { get; set; } = string.Empty;
     public int TokenRefreshSkewSeconds { get; set; } = 120;
     public ServiceJwtOptions ServiceJwt { get; set; } = new();
