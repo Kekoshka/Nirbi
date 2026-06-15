@@ -64,8 +64,11 @@ public class ConfirmationService : IConfirmationService
         if (confirmation == null)
             throw new NotFoundException($"Confirmation with id {confirmationId} not found");
 
+        // FIX: было `userId != Reviewer || userId != Initiator` Ч это всегда true
+        // (нельз€ быть и тем и другим), из-за чего метод всегда кидал Forbidden.
+        // ƒоступ есть, если пользователь Ч Ћ»Ѕќ reviewer, Ћ»Ѕќ initiator.
         var userId = _currentUserService.GetUserId();
-        if (userId != confirmation.ReviewerId ||
+        if (userId != confirmation.ReviewerId &&
             userId != confirmation.InitiatorId)
             throw new ForbiddenException();
 
@@ -74,15 +77,16 @@ public class ConfirmationService : IConfirmationService
 
     public async Task<ICollection<ConfirmationDTO>> GetConfirmationsByReviewerAsync()
     {
+        // FIX: убран фильтр `Status == Created`. Reviewer должен видеть все свои
+        // подтверждени€ (включа€ прин€тые/отклонЄнные/отозванные/истЄкшие) Ч
+        // так же, как initiator. »наче истори€ пропадает, а у приглашений
+        // (Invite to task, где reviewer = приглашЄнный) после ответа исчезает запись.
         var confirmations = await _context.Confirmations
-            .Where(c => c.ReviewerId == _currentUserService.GetUserId() &&
-            c.Status == ConfirmationStatus.Created.ToString())
+            .Where(c => c.ReviewerId == _currentUserService.GetUserId())
             .Include(c => c.Audits)
             .ToListAsync();
 
-        if (confirmations is null)
-            throw new NotFoundException();
-
+        // ToListAsync никогда не возвращает null Ч пустой список это валидный результат.
         return confirmations.ToConfirmationsDTO();
     }
 
@@ -92,9 +96,6 @@ public class ConfirmationService : IConfirmationService
             .Where(c => c.InitiatorId == _currentUserService.GetUserId())
             .Include(c => c.Audits)
             .ToListAsync();
-
-        if (confirmations is null)
-            throw new NotFoundException();
 
         return confirmations.ToConfirmationsDTO();
     }
@@ -148,7 +149,7 @@ public class ConfirmationService : IConfirmationService
 
         if (confirmation.Status != ConfirmationStatus.Created.ToString())
             throw new BadRequestException($"Cannot revoke confirmation with status: {confirmation.Status}");
-        
+
         //todo лучше перенести это в паттерн Repository, а то добавление аудитов может где-то забытьс€
         ConfirmationAudit confirmationAudit = new(
             confirmation.Id,
@@ -159,6 +160,5 @@ public class ConfirmationService : IConfirmationService
         confirmation.Revoke(_currentUserService.GetUserId());
 
         await _context.SaveChangesAsync();
-
     }
 }

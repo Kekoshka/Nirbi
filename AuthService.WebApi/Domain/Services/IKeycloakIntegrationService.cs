@@ -14,5 +14,8 @@ namespace AuthService.WebApi.Domain.Services
         Task<KeycloakUserDto> GetUserInfo(string id, CancellationToken cancellationToken = default);
         Task<bool> UpdateUser(UpdateUserRequest data, CancellationToken cancellationToken = default);
         Task<UserFields> GetUserProfileSchemaAsync(CancellationToken cancellationToken = default);
+        Task<(IReadOnlyList<KeycloakUserDto> Users, int Total)> ListUsersAsync(
+            int offset, int limit, string? search, CancellationToken cancellationToken = default);
+
     }
 }

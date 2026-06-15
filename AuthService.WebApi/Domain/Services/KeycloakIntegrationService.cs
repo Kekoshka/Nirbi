@@ -270,6 +270,34 @@ public class KeycloakIntegrationService : IKeycloakIntegrationService
         return userInfo;
     }
 
+    public async Task<(IReadOnlyList<KeycloakUserDto> Users, int Total)> ListUsersAsync(
+    int offset, int limit, string? search, CancellationToken cancellationToken = default)
+    {
+        var adminToken = await GetAdminTokenAsync(cancellationToken);
+        var bearer = $"Bearer {adminToken}";
+
+        // Нормализуем search: пустую строку шлём как null (Keycloak вернёт всех)
+        var searchParam = string.IsNullOrWhiteSpace(search) ? null : search.Trim();
+
+        // Список и счётчик параллельно — оба используют один admin-токен.
+        var usersTask = _keycloakClient.GetUsersAsync(
+            _keycloakOptions.Realm, bearer, offset, limit, searchParam, cancellationToken);
+        var countTask = _keycloakClient.GetUsersCountAsync(
+            _keycloakOptions.Realm, bearer, searchParam, cancellationToken);
+
+        await Task.WhenAll(usersTask, countTask);
+
+        var users = await usersTask ?? [];
+        var total = await countTask;
+
+        // Чистим credentials на всякий случай (как в GetUserInfo)
+        foreach (var u in users)
+            u.Credentials = null;
+
+        return (users, total);
+    }
+
+
     /// <summary>
     /// Извлекает UserId (claim "sub") из AccessToken без лишнего запроса к Keycloak.
     /// </summary>

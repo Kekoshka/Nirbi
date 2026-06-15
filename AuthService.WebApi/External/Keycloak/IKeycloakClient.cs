@@ -114,5 +114,29 @@ namespace AuthService.WebApi.External.Keycloak
             string realm,
             [Header("Authorization")] string authHeader,
             CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// Список пользователей realm с пагинацией и необязательным поиском.
+        /// search ищет по username/email/firstName/lastName (поведение Keycloak).
+        /// </summary>
+        [Get("/admin/realms/{realm}/users")]
+        Task<List<KeycloakUserDto>> GetUsersAsync(
+            string realm,
+            [Header("Authorization")] string bearerToken,
+            [Query] int first,
+            [Query] int max,
+            [Query] string? search,
+            CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// Количество пользователей realm (с тем же фильтром search, что и список).
+        /// Возвращает просто число.
+        /// </summary>
+        [Get("/admin/realms/{realm}/users/count")]
+        Task<int> GetUsersCountAsync(
+            string realm,
+            [Header("Authorization")] string bearerToken,
+            [Query] string? search,
+            CancellationToken cancellationToken = default);
     }
 }

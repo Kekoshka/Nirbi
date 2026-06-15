@@ -10,7 +10,7 @@ namespace GatewayService.WebApi.Services;
 public interface IMinorTaskAggregator
 {
     Task<MinorTaskDetailResponse?> GetTaskWithImagesAsync(Guid minorTaskId, string? authHeader);
-    Task<List<MinorTaskListItemResponse>> GetTasksWithPreviewAsync(int? limit, int? from, int? to, string? authHeader);
+    Task<PagedTasksResponse> GetTasksPagedAsync(int offset, int limit, string? search, string? status, string? sort, string? authHeader);
     Task<MinorTaskDetailResponse?> CreateTaskWithFilesAsync(CreateMinorTaskGatewayRequest request, string? authHeader);
 
     // Ленивая подгрузка превью: по списку task ID → превью (base64) батчем.
@@ -21,6 +21,7 @@ public interface IMinorTaskAggregator
     Task<System.Net.HttpStatusCode> UpdateTaskStatusAsync(Guid minorTaskId, Guid statusId, string? authHeader);
     Task<System.Net.HttpStatusCode> DeleteTaskAsync(Guid minorTaskId, string? authHeader);
     Task<System.Net.HttpStatusCode> DeleteTaskParticipantAsync(Guid minorTaskId, Guid participantId, string? authHeader);
+    Task<List<TaskParticipantResponse>> GetTaskParticipantsEnrichedAsync(Guid minorTaskId, string? authHeader);
 }
 
 public class MinorTaskAggregator : IMinorTaskAggregator
@@ -72,25 +73,31 @@ public class MinorTaskAggregator : IMinorTaskAggregator
         return detail;
     }
 
-    // ─── GET /api/tasks ──────────────────────────────────────────────────────
+    // ─── GET /api/tasks (серверная пагинация + поиск + фильтр + сортировка) ──
     //
-    //  БЫСТРЫЙ СПИСОК: картинки больше НЕ скачиваются здесь. Возвращаем только
-    //  метаданные задач + FileCollectionId, чтобы фронт догрузил превью отдельно
-    //  через GetTaskPreviewsAsync. Это убирает основную задержку (скачивание и
-    //  base64-кодирование байтов всех превью внутри одного ответа).
+    //  БЫСТРЫЙ СПИСОК: картинки НЕ скачиваются здесь (фронт догрузит превью через
+    //  GetTaskPreviewsAsync). Проксируем offset/limit/search/status/sort в
+    //  MinorTaskService, который отдаёт { total, items }, и возвращаем то же наружу,
+    //  добавив items[].FileCollectionId для ленивой загрузки превью.
 
-    public async Task<List<MinorTaskListItemResponse>> GetTasksWithPreviewAsync(int? limit, int? from, int? to, string? authHeader)
+    public async Task<PagedTasksResponse> GetTasksPagedAsync(
+        int offset, int limit, string? search, string? status, string? sort, string? authHeader)
     {
         var taskClient = CreateClient("MinorTaskService", authHeader);
 
-        var query = BuildQueryString(limit, from, to);
-        var tasksResponse = await taskClient.GetAsync($"/api/tasks{query}");
+        var parts = new List<string> { $"offset={offset}", $"limit={limit}" };
+        if (!string.IsNullOrWhiteSpace(search)) parts.Add($"search={Uri.EscapeDataString(search)}");
+        if (!string.IsNullOrWhiteSpace(status)) parts.Add($"status={Uri.EscapeDataString(status)}");
+        if (!string.IsNullOrWhiteSpace(sort)) parts.Add($"sort={Uri.EscapeDataString(sort)}");
+
+        var tasksResponse = await taskClient.GetAsync($"/api/tasks?{string.Join("&", parts)}");
         if (!tasksResponse.IsSuccessStatusCode)
             throw new ForbiddenException();
 
-        var tasks = await DeserializeAsync<List<MinorTaskResponse>>(tasksResponse) ?? [];
+        var paged = await DeserializeAsync<PagedMinorTasksProxy>(tasksResponse)
+                    ?? new PagedMinorTasksProxy();
 
-        return tasks.Select(task => new MinorTaskListItemResponse
+        var items = (paged.Items ?? []).Select(task => new MinorTaskListItemResponse
         {
             Id = task.Id,
             Name = task.Name,
@@ -102,8 +109,9 @@ public class MinorTaskAggregator : IMinorTaskAggregator
             Status = task.Status,
             ConsumerId = task.ConsumerId,
             FileCollectionId = task.FileCollectionId,   // превью догрузит фронт
-            // PreviewImageData / ContentType намеренно null в быстром списке
         }).ToList();
+
+        return new PagedTasksResponse { Total = paged.Total, Items = items };
     }
 
     // ─── POST /api/tasks/previews — батч-превью для ленивой загрузки ─────────
@@ -125,25 +133,25 @@ public class MinorTaskAggregator : IMinorTaskAggregator
 
         var ids = taskIds.Distinct().ToList();
 
-        // 1. task ID → FileCollectionId. Тянем задачи параллельно.
-        //    (Если в MinorTaskService появится батч-эндпоинт, отдающий
-        //     пары id/fileCollectionId — заменить этот блок на один запрос.)
+        // 1. task ID → FileCollectionId одним батч-запросом к MinorTaskService
+        //    (POST /api/tasks/collections). Заменяет N запросов GET /api/tasks/{id}.
         var taskToCollection = new Dictionary<Guid, Guid>();
-        var fetches = ids.Select(async id =>
+        try
         {
-            try
-            {
-                var resp = await taskClient.GetAsync($"/api/tasks/{id}");
-                if (!resp.IsSuccessStatusCode) return (id, (Guid?)null);
-                var task = await DeserializeAsync<MinorTaskResponse>(resp);
-                return (id, task?.FileCollectionId);
-            }
-            catch { return (id, (Guid?)null); }
-        });
-        var resolved = await Task.WhenAll(fetches);
-        foreach (var (id, collId) in resolved)
-            if (collId.HasValue && collId.Value != Guid.Empty)
-                taskToCollection[id] = collId.Value;
+            var idsBody = JsonSerializer.Serialize(new { Ids = ids }, _jsonOptions);
+            using var idsContent = new StringContent(idsBody, Encoding.UTF8, "application/json");
+            using var collResp = await taskClient.PostAsync("/api/tasks/collections", idsContent);
+            if (!collResp.IsSuccessStatusCode) return [];
+
+            var pairs = await DeserializeAsync<List<TaskCollectionDto>>(collResp) ?? [];
+            foreach (var p in pairs)
+                if (p.FileCollectionId.HasValue && p.FileCollectionId.Value != Guid.Empty)
+                    taskToCollection[p.Id] = p.FileCollectionId.Value;
+        }
+        catch
+        {
+            return [];
+        }
 
         if (taskToCollection.Count == 0) return [];
 
@@ -279,6 +287,69 @@ public class MinorTaskAggregator : IMinorTaskAggregator
         return response.StatusCode;
     }
 
+    // ─── GET /api/tasks/{id}/participants (с обогащением именами) ────────────
+    //
+    //  MinorTaskService отдаёт список GUID участников. Обогащаем именами из
+    //  AuthService, чтобы фронт показал, кого исключать.
+
+    public async Task<List<TaskParticipantResponse>> GetTaskParticipantsEnrichedAsync(
+        Guid minorTaskId, string? authHeader)
+    {
+        var taskClient = CreateClient("MinorTaskService", authHeader);
+        using var response = await taskClient.GetAsync($"/api/tasks/{minorTaskId}/participants");
+        if (!response.IsSuccessStatusCode)
+        {
+            // Пробрасываем 403/404 как пустой? Нет — пусть контроллер решит по статусу.
+            response.EnsureSuccessStatusCode();
+        }
+
+        var ids = await DeserializeAsync<List<Guid>>(response) ?? [];
+        if (ids.Count == 0) return [];
+
+        var names = await FetchUsernamesAsync(ids, authHeader);
+
+        return ids.Select(id => new TaskParticipantResponse
+        {
+            UserId = id,
+            Username = names.GetValueOrDefault(id),
+        }).ToList();
+    }
+
+    // Имена пользователей из AuthService (GET /api/Users/{id}), параллельно.
+    private async Task<Dictionary<Guid, string>> FetchUsernamesAsync(
+        List<Guid> userIds, string? authHeader)
+    {
+        if (userIds.Count == 0) return [];
+        var authClient = CreateClient("AuthService", authHeader);
+
+        var tasks = userIds.Distinct().Select(async id =>
+        {
+            try
+            {
+                // Запрашиваем ФИО (fields) — username бэк вернёт как часть профиля
+                using var resp = await authClient.GetAsync(
+                    $"/api/Users/{id}?fields=firstName&fields=secondName&fields=lastName&fields=username");
+                if (!resp.IsSuccessStatusCode) return (id, (string?)null);
+                var dict = await DeserializeAsync<Dictionary<string, string?>>(resp);
+                if (dict is null) return (id, (string?)null);
+                var display = string.Join(" ", new[]
+                {
+                    dict.GetValueOrDefault("lastName"),
+                    dict.GetValueOrDefault("firstName"),
+                    dict.GetValueOrDefault("secondName"),
+                }.Where(s => !string.IsNullOrWhiteSpace(s)));
+                if (string.IsNullOrWhiteSpace(display))
+                    display = dict.GetValueOrDefault("username") ?? id.ToString();
+                return (id, (string?)display);
+            }
+            catch { return (id, (string?)null); }
+        });
+
+        var results = await Task.WhenAll(tasks);
+        return results.Where(r => r.Item2 is not null)
+                      .ToDictionary(r => r.id, r => r.Item2!);
+    }
+
     // ─── Helpers ─────────────────────────────────────────────────────────────
 
     private HttpClient CreateClient(string name, string? authHeader)
@@ -317,14 +388,5 @@ public class MinorTaskAggregator : IMinorTaskAggregator
             file.Data = Convert.ToBase64String(bytes);
         }
         return file;
-    }
-
-    private static string BuildQueryString(int? limit, int? from, int? to)
-    {
-        var parts = new List<string>();
-        if (limit.HasValue) parts.Add($"limit={limit}");
-        if (from.HasValue) parts.Add($"from={from}");
-        if (to.HasValue) parts.Add($"to={to}");
-        return parts.Count > 0 ? "?" + string.Join("&", parts) : string.Empty;
     }
 }

@@ -39,7 +39,7 @@ public class MinorTasksController : ControllerBase
 
     [HttpPost("tasks/names")]
     public async Task<IActionResult> GetTaskNames(
-        [FromBody] GetTaskNamesByIdsRequest request,
+        GetTaskNamesByIdsRequest request,
         CancellationToken cancellationToken)
     {
         var result = await _mediator.Send(
@@ -49,13 +49,17 @@ public class MinorTasksController : ControllerBase
 
     [HttpGet("tasks")]
     public async Task<IActionResult> GetTasks(
-        [FromQuery] int? limit,
-        [FromQuery] int? from,
-        [FromQuery] int? to,
+        int offset,
+        int limit,
+        string? search,
+        string? status,
+        string? sort,
         CancellationToken cancellationToken)
     {
-        var minorTasks = await _mediator.Send(new GetMinorTasksQuery(limit, from, to), cancellationToken);
-        return Ok(minorTasks);
+        if (limit <= 0) limit = 20;
+        var result = await _mediator.Send(
+            new GetMinorTasksPagedQuery(offset, limit, search, status, sort), cancellationToken);
+        return Ok(result);
     }
 
     [HttpGet("statuses")]
@@ -109,4 +113,16 @@ public class MinorTasksController : ControllerBase
         await _mediator.Send(new DeleteMinorTaskParticipantCommand(minorTaskId, participantId), cancellationToken);
         return NoContent();
     }
+
+    /// <summary>Батч: по списку ID задач вернуть их FileCollectionId.</summary>
+    [HttpPost("tasks/collections")]
+    public async Task<IActionResult> GetTaskCollections(
+        GetTaskCollectionsByIdsRequest request,
+        CancellationToken cancellationToken)
+    {
+        var result = await _mediator.Send(
+            new GetTaskCollectionsByIdsQuery(request.Ids ?? []), cancellationToken);
+        return Ok(result);
+    }
+
 }

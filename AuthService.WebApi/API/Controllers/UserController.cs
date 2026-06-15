@@ -167,4 +167,51 @@ public class UsersController : ControllerBase
         UserFields v = await _keycloakService.GetUserProfileSchemaAsync(cancellationToken).ConfigureAwait(false);
         return Ok(v.Attributes.ConvertAll(x => x.Name).ToArray());
     }
+
+    /// <summary>
+    /// Список пользователей с пагинацией и поиском.
+    /// fields управляет составом возвращаемых полей (как в GetUserById).
+    /// Если fields пуст — возвращаем базовый набор (id, firstName, secondName,
+    /// lastName, username).
+    /// </summary>
+    [HttpGet]
+    public async Task<IActionResult> ListUsers(
+        [FromQuery] int offset,
+        [FromQuery] int limit,
+        [FromQuery] string? search,
+        [FromQuery] List<string>? fields,
+        CancellationToken cancellationToken)
+    {
+        if (limit <= 0) limit = 20;
+        if (limit > 100) limit = 100;   // защита от слишком больших страниц
+        if (offset < 0) offset = 0;
+
+        var (users, total) = await _keycloakService.ListUsersAsync(
+            offset, limit, search, cancellationToken);
+
+        // Поля по умолчанию, если клиент не указал fields
+        var requestedFields = (fields is { Count: > 0 })
+            ? fields
+            : new List<string> { "firstName", "secondName", "lastName", "username" };
+
+        var items = users.Select(u =>
+        {
+            // ToFieldDict отдаёт Dictionary<string,string>; добавляем id отдельно,
+            // т.к. он нужен фронту всегда для перехода к профилю/приглашения.
+            var dict = u.ToFieldDict(requestedFields) ?? new Dictionary<string, string>();
+            var result = new Dictionary<string, string?>(dict.Count + 1)
+            {
+                ["id"] = u.Id
+            };
+            foreach (var kv in dict)
+                result[kv.Key] = kv.Value;
+            return result;
+        }).ToList();
+
+        return Ok(new PagedUsersResponse
+        {
+            Total = total,
+            Items = items
+        });
+    }
 }   

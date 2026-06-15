@@ -33,6 +33,10 @@
         <svg viewBox="0 0 24 24" fill="none"><path d="M9 12l2 2 4-4M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0z" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/></svg>
         <span>Подтверждения</span>
       </a>
+      <a href="users.html" class="nav-item" data-tooltip="Пользователи">
+        <svg viewBox="0 0 24 24" fill="none"><circle cx="9" cy="8" r="3.25" stroke="currentColor" stroke-width="1.75"/><path d="M3.5 19c0-3 2.46-5.25 5.5-5.25s5.5 2.25 5.5 5.25" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"/><path d="M16 5.5a3 3 0 0 1 0 6M18 19c0-2.2-.9-3.9-2.3-5" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"/></svg>
+        <span>Пользователи</span>
+      </a>
       <a href="profile.html" class="nav-item" data-tooltip="Мой профиль">
         <svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="8" r="4" stroke="currentColor" stroke-width="1.75"/><path d="M4 20c0-4 3.582-7 8-7s8 3 8 7" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"/></svg>
         <span>Профиль</span>
@@ -128,6 +132,13 @@
         <p>Задач не найдено</p>
         <span>Попробуйте изменить фильтры или создайте новую задачу</span>
       </div>
+
+      <!-- Пагинация -->
+      <div class="tasks-pager" id="tasks-pager" hidden>
+        <button class="pager-btn" id="tasks-prev" disabled>← Назад</button>
+        <span class="page-label" id="tasks-page-label">Стр. 1</span>
+        <button class="pager-btn" id="tasks-next">Вперёд →</button>
+      </div>
     </section>
 
   </main>
@@ -169,6 +180,9 @@
       <div class="detail-map-mini">
         <div id="detail-map"></div>
       </div>
+
+      <!-- Управление для владельца: статус + участники (заполняется JS) -->
+      <div id="detail-owner-controls" hidden></div>
     </div>
 
     <div class="detail-footer" id="detail-footer">

@@ -209,3 +209,31 @@ public class CollectionPreviewDto
     public string? ContentType { get; set; }
     public string Data { get; set; } = string.Empty;
 }
+
+/// <summary>Ответ MinorTaskService POST /api/tasks/collections.</summary>
+public class TaskCollectionDto
+{
+    public Guid Id { get; set; }
+    public Guid? FileCollectionId { get; set; }
+}
+
+/// <summary>Ответ списка задач с пагинацией (наружу, фронту).</summary>
+public class PagedTasksResponse
+{
+    public int Total { get; set; }
+    public List<MinorTaskListItemResponse> Items { get; set; } = [];
+}
+
+/// <summary>Proxy-DTO ответа MinorTaskService GET /api/tasks ({ total, items }).</summary>
+public class PagedMinorTasksProxy
+{
+    public int Total { get; set; }
+    public List<MinorTaskResponse> Items { get; set; } = [];
+}
+
+/// <summary>Участник задачи для фронта: id + отображаемое имя.</summary>
+public class TaskParticipantResponse
+{
+    public Guid UserId { get; set; }
+    public string? Username { get; set; }
+}

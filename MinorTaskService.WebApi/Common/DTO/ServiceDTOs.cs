@@ -49,4 +49,11 @@
         string Name);
 
     public record class GetMinorTaskParticipantsDTO(Guid UserId);
+
+    public class PagedMinorTasksDTO
+    {
+        public int Total { get; set; }
+        public List<GetMinorTasksDTO> Items { get; set; } = [];
+    }
+
 }

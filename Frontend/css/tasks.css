@@ -1159,3 +1159,72 @@
   .confirm-actions .btn-secondary,
   .confirm-actions .btn-danger { width: 100%; }
 }
+@media (min-width: 641px) {
+  /* Сайдбар фиксирован к левому краю и всегда во весь экран по высоте */
+  .sidebar {
+    position: fixed;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    height: 100vh;
+    /* собственный скролл, если пунктов меню много */
+    overflow-y: auto;
+    overflow-x: hidden;
+    z-index: 210;
+  }
+ 
+  /* Контент сдвигаем вправо на ширину сайдбара и скроллим его, а не страницу */
+  .main-content {
+    margin-left: var(--sidebar-w, 220px);
+  }
+}
+ 
+/* На «slim»-брейкпоинте ширина сайдбара меньше — синхронизируем отступ */
+@media (min-width: 641px) and (max-width: 900px) {
+  .main-content {
+    margin-left: var(--sidebar-w-slim, 64px);
+  }
+}
+ 
+/* На мобильном (<=640px) сайдбар уже off-canvas (translateX), отступ не нужен */
+@media (max-width: 640px) {
+  .main-content {
+    margin-left: 0;
+  }
+}
+ 
+ 
+/* ── Пагинация (задачи) ──────────────────────────────────────────────────── */
+.tasks-pager {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  padding: 1.5rem 0 .5rem;
+}
+.tasks-pager .page-label {
+  font-size: .85rem;
+  font-weight: 600;
+  color: var(--text-sec);
+  min-width: 120px;
+  text-align: center;
+}
+.tasks-pager .pager-btn {
+  height: 38px;
+  padding: 0 1.1rem;
+  border-radius: var(--radius-sm);
+  border: 1.5px solid var(--border);
+  background: var(--bg);
+  font-size: .85rem;
+  font-weight: 700;
+  color: var(--text);
+  transition: all var(--transition);
+}
+.tasks-pager .pager-btn:hover:not(:disabled) {
+  border-color: var(--primary);
+  color: var(--primary);
+}
+.tasks-pager .pager-btn:disabled {
+  opacity: .45;
+  cursor: not-allowed;
+}

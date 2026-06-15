@@ -5,6 +5,8 @@ import { confirmationsApi }                   from './confirmationsApi.js';
 import { startNotifications, onNotification } from './notifications.js';
 import { CONFIRMATION_TYPES }  from './config.js';
 import { parseMetaData }       from './confirmationMeta.js';
+import { openUserProfile }     from './userProfileModal.js';
+import { openTaskDetail }      from './taskDetailModal.js';
 
 // Локальные лейблы статусов
 const STATUS_LABELS = {
@@ -101,12 +103,12 @@ async function loadAll() {
       confirmationsApi.getByReviewer(currentUserId).catch(() => []),
       confirmationsApi.getByInitiator(currentUserId).catch(() => []),
     ]);
-    received = (Array.isArray(inc) ? inc : []).filter(c =>
-      !c.confirmationType || c.confirmationType === CONFIRMATION_TYPES.RESPOND_TO_MINOR_TASK
-    );
-    sent = (Array.isArray(out) ? out : []).filter(c =>
-      !c.confirmationType || c.confirmationType === CONFIRMATION_TYPES.RESPOND_TO_MINOR_TASK
-    );
+    // Пропускаем оба типа: отклики (Respond) и приглашения (Invite).
+    const allowedType = t => !t
+      || t === CONFIRMATION_TYPES.RESPOND_TO_MINOR_TASK
+      || t === CONFIRMATION_TYPES.INVITE_TO_TASK;
+    received = (Array.isArray(inc) ? inc : []).filter(c => allowedType(c.confirmationType));
+    sent = (Array.isArray(out) ? out : []).filter(c => allowedType(c.confirmationType));
     render();
   } catch (e) {
     console.error('Failed to load confirmations:', e);
@@ -145,18 +147,37 @@ function render() {
 
 function renderCard(c, kind) {
   const status   = (c.status || '').toLowerCase();
+  const isInvite = c.confirmationType === CONFIRMATION_TYPES.INVITE_TO_TASK;
 
   // Имена приходят из Gateway-агрегатора напрямую.
   const taskName = escapeHtml(taskNameOf(c));
   const who      = escapeHtml(counterpartyOf(c, kind));
 
-  const subtitle = kind === 'received'
-    ? (who ? `От: <strong>${who}</strong>` : 'От пользователя')
-    : (who ? `Организатор: <strong>${who}</strong>` : `Заявка на: <strong>${taskName}</strong>`);
+  // ID «второй стороны» для просмотра профиля:
+  // received → собеседник это initiator; sent → reviewer.
+  const counterpartyId = kind === 'received' ? c.initiatorId : c.reviewerId;
 
-  const headline = kind === 'received'
-    ? `Заявка на задачу «${taskName}»`
-    : `Ваш отклик на «${taskName}»`;
+  // Тексты зависят от типа (отклик/приглашение) и вкладки.
+  let subtitle, headline;
+  if (isInvite) {
+    if (kind === 'received') {
+      // Меня пригласили в задачу (я reviewer)
+      headline = `Приглашение в задачу «${taskName}»`;
+      subtitle = who ? `Пригласил: <strong>${who}</strong>` : 'Приглашение от организатора';
+    } else {
+      // Я пригласил волонтёра (я initiator)
+      headline = `Приглашение в «${taskName}»`;
+      subtitle = who ? `Кому: <strong>${who}</strong>` : 'Приглашение волонтёру';
+    }
+  } else {
+    if (kind === 'received') {
+      headline = `Заявка на задачу «${taskName}»`;
+      subtitle = who ? `От: <strong>${who}</strong>` : 'От пользователя';
+    } else {
+      headline = `Ваш отклик на «${taskName}»`;
+      subtitle = who ? `Организатор: <strong>${who}</strong>` : `Заявка на: <strong>${taskName}</strong>`;
+    }
+  }
 
   const reasonRow = (status === 'rejected' && c.rejectionReason)
     ? `<div class="conf-row conf-reason"><span>Причина:</span> ${escapeHtml(c.rejectionReason)}</div>`
@@ -167,7 +188,7 @@ function renderCard(c, kind) {
     if (kind === 'received') {
       actions = `
         <button class="conf-btn conf-btn-accept" data-action="accept" data-id="${c.id}">
-          <span class="btn-label">Принять</span>
+          <span class="btn-label">${isInvite ? 'Принять приглашение' : 'Принять'}</span>
           <span class="btn-spinner" hidden></span>
         </button>
         <button class="conf-btn conf-btn-reject" data-action="reject" data-id="${c.id}">
@@ -177,11 +198,22 @@ function renderCard(c, kind) {
     } else {
       actions = `
         <button class="conf-btn conf-btn-revoke" data-action="revoke" data-id="${c.id}">
-          <span class="btn-label">Отозвать</span>
+          <span class="btn-label">${isInvite ? 'Отменить приглашение' : 'Отозвать'}</span>
           <span class="btn-spinner" hidden></span>
         </button>`;
     }
   }
+
+  // Кнопка просмотра профиля собеседника
+  const profileBtn = counterpartyId
+    ? `<button class="conf-btn conf-btn-view" data-action="view-profile" data-user="${counterpartyId}" data-name="${who}">
+         <span class="btn-label">Профиль</span>
+       </button>`
+    : '';
+
+  const allActions = (actions || profileBtn)
+    ? `<div class="conf-card-actions">${actions}${profileBtn}</div>`
+    : '';
 
   // data-entity-id — для перехода к задаче по клику
   return `
@@ -199,7 +231,7 @@ function renderCard(c, kind) {
         ${c.expiresAt && isPending(c.status) ? `<div class="conf-row"><span>Истекает:</span> ${fmtDate(c.expiresAt)}</div>` : ''}
         ${reasonRow}
       </div>
-      ${actions ? `<div class="conf-card-actions">${actions}</div>` : ''}
+      ${allActions}
       <div class="conf-card-link-hint">Нажмите чтобы открыть задачу →</div>
     </div>`;
 }
@@ -216,14 +248,20 @@ function bindActions() {
         return;
       }
 
+      // Просмотр профиля собеседника
+      if (action === 'view-profile') {
+        openUserProfile(btn.dataset.user, { fallbackName: btn.dataset.name || '' });
+        return;
+      }
+
       setLoading(btn, true);
       try {
         if (action === 'accept') {
           await confirmationsApi.respond(id, true);
-          toast.success('Заявка принята');
+          toast.success('Принято');
         } else if (action === 'revoke') {
           await confirmationsApi.revoke(id, currentUserId);
-          toast.info('Заявка отозвана');
+          toast.info('Отозвано');
         }
         await loadAll();
       } catch (e) {
@@ -234,14 +272,14 @@ function bindActions() {
     });
   });
 
-  // Клик по карточке → открыть связанную задачу
+  // Клик по карточке → открыть детали задачи прямо здесь (read-only модалка)
   listEl.querySelectorAll('.conf-card-clickable').forEach(card => {
     card.addEventListener('click', e => {
-      // Не переходим, если пользователь кликнул на кнопку действия
+      // Не открываем, если кликнули по кнопке действия или кнопке профиля
       if (e.target.closest('.conf-btn')) return;
       const entityId = card.dataset.entityId;
       if (entityId && entityId !== '00000000-0000-0000-0000-000000000000') {
-        window.location.href = `tasks.html?openTask=${entityId}`;
+        openTaskDetail(entityId);
       }
     });
   });

@@ -15,6 +15,7 @@ namespace MinorTaskService.WebApi.Interfaces
         Task UpdateMinorTaskAsync(UpdateMinorTaskDTO updateDto, CancellationToken cancellationToken);
         Task UpdateMinorTaskStatusAsync(Guid minorTaskId, Guid statusId, CancellationToken cancellationToken);
         Task DeleteMinorTaskAsync(Guid minorTaskId, CancellationToken cancellationToken);
+        Task<List<TaskCollectionDTO>> GetTaskCollectionsByIdsAsync(IReadOnlyCollection<Guid> ids, CancellationToken cancellationToken);
+        Task<PagedMinorTasksDTO> GetMinorTasksPagedAsync(int offset, int limit, string? search, string? status, string? sort, CancellationToken cancellationToken);
     }
-
 }

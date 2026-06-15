@@ -118,5 +118,79 @@ namespace MinorTaskService.WebApi.Services
             minorTask.Delete();
             await _context.SaveChangesAsync(cancellationToken);
         }
+
+        public async Task<List<TaskCollectionDTO>> GetTaskCollectionsByIdsAsync(
+            IReadOnlyCollection<Guid> ids,
+            CancellationToken cancellationToken)
+        {
+            if (ids is null || ids.Count == 0)
+                return [];
+
+            var idList = ids.Distinct().ToList();
+
+            // Берём только id и коллекцию — без статуса/связей, запрос лёгкий.
+            return await _context.MinorTasks
+                .Where(mt => idList.Contains(mt.Id))
+                .Select(mt => new TaskCollectionDTO
+                {
+                    Id = mt.Id,
+                    FileCollectionId = mt.FileCollectionId
+                })
+                .ToListAsync(cancellationToken);
+        }
+
+        public async Task<PagedMinorTasksDTO> GetMinorTasksPagedAsync(
+            int offset, int limit, string? search, string? status, string? sort,
+            CancellationToken cancellationToken)
+        {
+            if (limit <= 0) limit = 20;
+            if (limit > 100) limit = 100;
+            if (offset < 0) offset = 0;
+
+            IQueryable<MinorTask> query = _context.MinorTasks
+                .Include(mt => mt.Status)
+                .AsQueryable();
+
+            // По умолчанию показывать только задачи «в поиске». Если нужен показ всех —
+            // убери эту строку. Если фронт прислал конкретный статус — он переопределит ниже.
+            query = query.Where(mt => mt.StatusId == StatusType.InSearch);
+
+            // Поиск по названию (подстрока, регистронезависимо на уровне БД (ILIKE в PG))
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                var term = search.Trim();
+                query = query.Where(mt => EF.Functions.ILike(mt.Name, $"%{term}%"));
+            }
+
+            // Фильтр по имени статуса (если фронт прислал)
+            if (!string.IsNullOrWhiteSpace(status))
+            {
+                var st = status.Trim();
+                query = query.Where(mt => mt.Status != null && mt.Status.Name == st);
+            }
+
+            // Сортировка
+            query = sort switch
+            {
+                "reward" => query.OrderByDescending(mt => mt.Encouragement).ThenBy(mt => mt.Id),
+                "volunteers" => query.OrderByDescending(mt => mt.NumberVolunteers).ThenBy(mt => mt.Id),
+                // newest по умолчанию: если есть CreatedAt — лучше по нему; иначе по Id
+                _ => query.OrderByDescending(mt => mt.Id),
+            };
+
+            var total = await query.CountAsync(cancellationToken);
+
+            var items = await query
+                .Skip(offset)
+                .Take(limit)
+                .ToListAsync(cancellationToken);
+
+            return new PagedMinorTasksDTO
+            {
+                Total = total,
+                Items = items.ToGetMinorTasksDTO(),
+            };
+        }
+
     }
 }

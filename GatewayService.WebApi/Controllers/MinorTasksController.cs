@@ -34,16 +34,19 @@ public class MinorTasksController : ControllerBase
         return CreatedAtAction(nameof(GetTask), new { minorTaskId = result.Id }, result);
     }
 
-    /// <summary>Получить список задач — с превью первого изображения для каждой.</summary>
+    /// <summary>Список задач: серверная пагинация, поиск, фильтр по статусу, сортировка.</summary>
     [HttpGet]
-    [ProducesResponseType(typeof(List<MinorTaskListItemResponse>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(PagedTasksResponse), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetTasks(
-        [FromQuery] int? limit,
-        [FromQuery] int? from,
-        [FromQuery] int? to)
+        int offset,
+        int limit,
+        string? search,
+        string? status,
+        string? sort)
     {
+        if (limit <= 0) limit = 20;
         var authHeader = Request.Headers.Authorization.ToString();
-        var result = await _aggregator.GetTasksWithPreviewAsync(limit, from, to, authHeader);
+        var result = await _aggregator.GetTasksPagedAsync(offset, limit, search, status, sort, authHeader);
         return Ok(result);
     }
 
@@ -110,6 +113,16 @@ public class MinorTasksController : ControllerBase
         var authHeader = Request.Headers.Authorization.ToString();
         var statusCode = await _aggregator.DeleteTaskParticipantAsync(minorTaskId, participantId, authHeader);
         return StatusCode((int)statusCode);
+    }
+
+    /// <summary>Список участников задачи с именами (создатель/участник — проверка в MinorTaskService).</summary>
+    [HttpGet("{minorTaskId:guid}/participants")]
+    [ProducesResponseType(typeof(List<TaskParticipantResponse>), StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetTaskParticipants(Guid minorTaskId)
+    {
+        var authHeader = Request.Headers.Authorization.ToString();
+        var result = await _aggregator.GetTaskParticipantsEnrichedAsync(minorTaskId, authHeader);
+        return Ok(result);
     }
 
     /// <summary>

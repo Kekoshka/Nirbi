@@ -1,8 +1,14 @@
 import { api } from './api.js';
 
 export const tasksApi = {
-  getAll(limit = 50, from = 0) {
-    return api.get(`/api/tasks?limit=${limit}&from=${from}`);
+  // Серверная пагинация + поиск + фильтр по статусу + сортировка.
+  // Возвращает { total, items }.
+  getPage({ offset = 0, limit = 20, search = '', status = '', sort = 'newest' } = {}) {
+    const parts = [`offset=${offset}`, `limit=${limit}`];
+    if (search) parts.push(`search=${encodeURIComponent(search)}`);
+    if (status) parts.push(`status=${encodeURIComponent(status)}`);
+    if (sort)   parts.push(`sort=${encodeURIComponent(sort)}`);
+    return api.get(`/api/tasks?${parts.join('&')}`);
   },
 
   getById(id) {
@@ -48,6 +54,11 @@ export const tasksApi = {
 
   removeParticipant(taskId, participantId) {
     return api.delete(`/api/tasks/${taskId}/participants/${participantId}`);
+  },
+
+  // Список участников задачи (GUID[]). Доступ на сервере: владелец или участник.
+  getParticipants(taskId) {
+    return api.get(`/api/tasks/${taskId}/participants`);
   },
 
   getStatuses() {

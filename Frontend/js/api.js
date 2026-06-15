@@ -134,27 +134,34 @@ export const authApi = {
   },
 };
 
-// ── User lookup — для обогащения данных задач именами организаторов ──────────
-// Подтверждения обогащает Gateway-агрегатор (entityName/initiatorUsername/reviewerUsername),
-// поэтому usersApi здесь нужен ТОЛЬКО для имён владельцев задач на карточках.
-//
-// Контракт AuthService (swagger):
-//   GET /api/Users/users/{id}                  → UserProfile
-//   GET /api/Users/users/fullnames?ids=&ids=   → [{ id, firstName, secondName, lastName }]
-//   GET /api/Users/search?username=            → [{ userId, username }]
+// Хелпер: собрать query-строку ?fields=a&fields=b из массива полей
+function buildFieldsQuery(fields) {
+  if (!fields || !fields.length) return '';
+  return fields.map(f => `fields=${encodeURIComponent(f)}`).join('&');
+}
+
+// Поля, которые фронт запрашивает для отображения имени в lookup.
+export const NAME_FIELDS = ['firstName', 'secondName', 'lastName', 'username'];
+
+// ── User lookup — для обогащения именами организаторов задач ─────────────────
+// Реальные маршруты AuthService (через Gateway):
+//   GET /api/Users/{id}?fields=...           → { id, ...поля } либо полный UserProfile
+//   GET /api/Users/fullnames?ids=&ids=       → [{ id, firstName, secondName, lastName }]
+//   GET /api/Users/search?username=          → [{ userId, username }]
+//   GET /api/Users?offset=&limit=&search=&fields=...  → { total, items } либо [...]
 export const usersApi = {
-  // Получить пользователя по ID
-  getById(userId) {
-    return api.get(`/api/Users/users/${userId}`);
+  // Профиль по ID. fields — список желаемых полей; если пуст, бэкенд вернёт полный UserProfile.
+  getById(userId, fields = null) {
+    const qs = buildFieldsQuery(fields);
+    return api.get(`/api/Users/${userId}${qs ? `?${qs}` : ''}`);
   },
 
-  // Батч ФИО по массиву ID: GET /api/Users/users/fullnames?ids=..&ids=..
-  // Возвращает [{ id, firstName, secondName, lastName }]
+  // Батч ФИО: GET /api/Users/fullnames?ids=..&ids=..
   async getByIds(ids) {
     if (!ids || !ids.length) return [];
     const qs = ids.map(id => `ids=${encodeURIComponent(id)}`).join('&');
     try {
-      const result = await api.get(`/api/Users/users/fullnames?${qs}`);
+      const result = await api.get(`/api/Users/fullnames?${qs}`);
       return Array.isArray(result) ? result : [];
     } catch (e) {
       console.warn('[usersApi] getByIds failed:', e.message);
@@ -162,8 +169,7 @@ export const usersApi = {
     }
   },
 
-  // Удобный хелпер: возвращает Map<userId, displayName> для быстрого lookup.
-  // displayName собираем из ФИО; если его нет — username/userId как фолбэк.
+  // Map<userId, displayName>
   async getUsernameMap(ids) {
     const unique = [...new Set((ids || []).filter(Boolean).map(String))];
     if (!unique.length) return new Map();
@@ -178,5 +184,31 @@ export const usersApi = {
       map.set(String(id), display);
     });
     return map;
+  },
+
+  // Поиск по username (частичное совпадение)
+  search(username) {
+    return api.get(`/api/Users/search?username=${encodeURIComponent(username)}`);
+  },
+
+  // Список пользователей с пагинацией.
+  // GET /api/Users?offset&limit&search&fields=...
+  // Ответ: { total, items:[...] } (предпочтительно) либо голый массив [...].
+  // Нормализуем к { total, items } в любом случае.
+  async list({ offset = 0, limit = 20, search = '', fields = null } = {}) {
+    const parts = [`offset=${offset}`, `limit=${limit}`];
+    if (search) parts.push(`search=${encodeURIComponent(search)}`);
+    const fq = buildFieldsQuery(fields);
+    if (fq) parts.push(fq);
+
+    const raw = await api.get(`/api/Users?${parts.join('&')}`);
+
+    if (Array.isArray(raw)) {
+      return { total: null, items: raw };
+    }
+    if (raw && Array.isArray(raw.items)) {
+      return { total: typeof raw.total === 'number' ? raw.total : null, items: raw.items };
+    }
+    return { total: 0, items: [] };
   },
 };

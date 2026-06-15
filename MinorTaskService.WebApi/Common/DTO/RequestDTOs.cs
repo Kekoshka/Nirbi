@@ -23,4 +23,17 @@
     {
         public List<Guid> Ids { get; set; } = [];
     }
+
+    /// <summary>Запрос: список ID задач.</summary>
+    public class GetTaskCollectionsByIdsRequest
+    {
+        public List<Guid>? Ids { get; set; }
+    }
+
+    /// <summary>Пара «задача → её коллекция файлов».</summary>
+    public class TaskCollectionDTO
+    {
+        public Guid Id { get; set; }
+        public Guid? FileCollectionId { get; set; }
+    }
 }

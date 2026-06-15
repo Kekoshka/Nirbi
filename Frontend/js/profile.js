@@ -1,7 +1,7 @@
 import { toast }       from './toast.js';
 import { tokenStore }  from './tokenStore.js';
 import { authApi }     from './api.js';
-import { profileApi }  from './profileApi.js';
+import { profileApi, PROFILE_FIELDS }  from './profileApi.js';
 import { startNotifications } from './notifications.js';
 
 // ── Guard ────────────────────────────────────────────────────────────────────
@@ -32,12 +32,6 @@ const formEducation = document.getElementById('form-education');
 const formSecurity  = document.getElementById('form-security');
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
-function escHtml(s) {
-  return String(s ?? '').replace(/[&<>"']/g, c => ({
-    '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;',
-  }[c]));
-}
-
 function val(id) {
   return (document.getElementById(id)?.value ?? '').trim();
 }
@@ -73,7 +67,6 @@ function initials(p) {
   const parts = [p.firstName, p.secondName, p.lastName]
     .filter(Boolean)
     .map(s => s[0].toUpperCase());
-  // Показываем первые две буквы: имя + фамилия
   return [parts[0], parts[parts.length > 1 ? parts.length - 1 : 1]].filter(Boolean).join('') || '?';
 }
 
@@ -86,7 +79,8 @@ function fullName(p) {
 async function loadProfile() {
   try {
     showSkeleton(true);
-    profile = await profileApi.getById(currentUserId);
+    // Запрашиваем полный набор полей (включая мессенджеры)
+    profile = await profileApi.getById(currentUserId, PROFILE_FIELDS);
     renderProfile();
   } catch (e) {
     toast.error('Не удалось загрузить профиль');
@@ -120,6 +114,11 @@ function renderProfile() {
   setFieldValue('pf-birthdate',  profile.birthDate);
   setFieldValue('pf-city',       profile.city);
   setFieldValue('pf-about',      profile.about);
+
+  // Messengers
+  setFieldValue('pf-tg',  profile.tg);
+  setFieldValue('pf-vk',  profile.vk);
+  setFieldValue('pf-max', profile.max);
 
   // Education tab fields
   setFieldValue('pf-edu-place',       profile.educationPlace);
@@ -194,6 +193,11 @@ formInfo.addEventListener('submit', async e => {
       BirthDate:       val('pf-birthdate')  || null,
       City:            val('pf-city')       || null,
       About:           val('pf-about')      || null,
+      // Мессенджеры — имена строго как в UpdateUserRequest/UserProfile (vk/tg/max),
+      // чтобы байндинг не зависел от политики именования JSON на бэке.
+      vk:              val('pf-vk')  || null,
+      tg:              val('pf-tg')  || null,
+      max:             val('pf-max') || null,
       CurrentPassword: currentPwd,
     });
     toast.success('Профиль обновлён');
