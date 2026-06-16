@@ -607,11 +607,13 @@ async function openDetail(taskId) {
     renderOwnerControls(task);
   } else {
     // Проверяем, не отправлял ли уже текущий пользователь заявку на эту задачу
-    const myApplication = confirmations.find(c =>
-      String(c.initiatorId) === String(currentUserId) &&
-      String(c.entityId)    === String(task.id)      &&
-      (c.confirmationType || '') === CONFIRMATION_TYPES.RESPOND_TO_MINOR_TASK
-    );
+    const myApplication = confirmations
+      .filter(c =>
+        String(c.initiatorId) === String(currentUserId) &&
+        String(c.entityId)    === String(task.id)       &&
+        (c.confirmationType || '') === CONFIRMATION_TYPES.RESPOND_TO_MINOR_TASK
+      )
+      .sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0))[0] ?? null;
     const status = (myApplication?.status || '').toLowerCase();
 
     if (myApplication && isPending(myApplication.status)) {
@@ -643,7 +645,25 @@ async function openDetail(taskId) {
         <div class="detail-apply-info detail-apply-accepted">
           <svg viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="8.5" stroke="currentColor" stroke-width="1.5"/><path d="M6.5 10l2.5 2.5 4.5-4.5" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/></svg>
           <span>Вы участвуете в этой задаче</span>
-        </div>`;
+        </div>
+        <button class="btn-outline-primary" id="detail-btn-leave">
+          <span class="btn-label">Покинуть задачу</span>
+          <span class="btn-spinner" hidden></span>
+        </button>`;
+      document.getElementById('detail-btn-leave').addEventListener('click', async () => {
+        setLoading('detail-btn-leave', true);
+        try {
+          await tasksApi.removeParticipant(task.id, currentUserId);
+          toast.info('Вы покинули задачу');
+          closeModal(modalDetail);
+          await loadTasks();
+          await loadConfirmations();
+        } catch (e) {
+          toast.error(e.message || 'Не удалось покинуть задачу');
+        } finally {
+          setLoading('detail-btn-leave', false);
+        }
+      });
     } else {
       // Не подавал, либо предыдущая заявка отклонена/отозвана/истекла — можно подать новую
       const wasRejected = myApplication && (status === 'rejected' || status === 'expired' || status === 'revoked');
@@ -770,9 +790,15 @@ async function renderParticipants(task) {
       wrap.innerHTML = '<div class="owner-participants-empty">Пока нет участников</div>';
       return;
     }
+
+    // Собираем id — бэкенд может вернуть GUID[] или объекты
+    const ids = arr.map(p => String(p.userId ?? p));
+    // Батч-запрос ФИО из AuthService
+    const nameMap = await usersApi.getUsernameMap(ids).catch(() => new Map());
+
     wrap.innerHTML = arr.map(p => {
-      const id = p.userId ?? p;
-      const name = escapeHtmlSafe(p.username || String(id));
+      const id = String(p.userId ?? p);
+      const name = escapeHtmlSafe(nameMap.get(id) || p.username || id);
       return `
         <div class="owner-participant" data-uid="${id}">
           <button type="button" class="owner-participant-name link-inline" data-uid="${id}" data-name="${name}">${name}</button>

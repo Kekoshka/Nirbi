@@ -6,7 +6,7 @@ using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Options;
 using MinorTaskService.WebApi.Common.Options;
 
-namespace NotificationService.WebApi.Services.BackgroundServices
+namespace MinorTaskService.WebApi.Services.BackgroundServices
 {
     public class ConsumerBase<TMessage> : BackgroundService
     {
@@ -54,14 +54,26 @@ namespace NotificationService.WebApi.Services.BackgroundServices
                 EnableAutoCommit = bool.Parse(_kafkaConsumersOptions.EnableAutoCommit ?? "true"),
             };
 
-            _consumer = new ConsumerBuilder<string, TMessage>(consumerConfig)
-                .SetKeyDeserializer(Deserializers.Utf8)
-                .SetValueDeserializer(new AvroDeserializer<TMessage>(_schemaRegistry).AsSyncOverAsync<TMessage>())
-                .SetErrorHandler((_, e) =>
-                {
-                    _logger.LogError("Kafka error: {Reason}", e.Reason);
-                })
-                .Build();
+            var avroConfig = new AvroDeserializerConfig()
+            {
+                SubjectNameStrategy = SubjectNameStrategy.Record
+            };
+
+            try
+            {
+                _consumer = new ConsumerBuilder<string, TMessage>(consumerConfig)
+                    .SetKeyDeserializer(Deserializers.Utf8)
+                    .SetValueDeserializer(new AvroDeserializer<TMessage>(_schemaRegistry, avroConfig).AsSyncOverAsync<TMessage>())
+                    .SetErrorHandler((_, e) =>
+                    {
+                        _logger.LogError("Kafka error: {Reason}", e.Reason);
+                    })
+                    .Build();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex.Message);
+            }
         }
 
         protected override Task ExecuteAsync(CancellationToken stoppingToken)

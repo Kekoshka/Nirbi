@@ -56,7 +56,7 @@ namespace MinorTaskService.WebApi.Services
         {
             var minorTasks = await _context.MinorTasks
                 .Include(mt => mt.Status)
-                .Where(mt => mt.StatusId == StatusType.InSearch)
+                .Where(mt => mt.StatusId == StatusType.InSearch || mt.StatusId == StatusType.InProgress)
                 .OrderBy(mt => mt.Id)
                 .Take(limit)
                 .ToListAsync();
@@ -71,7 +71,7 @@ namespace MinorTaskService.WebApi.Services
         {
             var minorTasks = await _context.MinorTasks
                 .Include(mt => mt.Status)
-                .Where(mt => mt.StatusId == StatusType.InSearch)
+                .Where(mt => mt.StatusId == StatusType.InSearch || mt.StatusId == StatusType.InProgress)
                 .OrderBy(mt => mt.Id)
                 .Skip(from)
                 .Take(to)
@@ -99,6 +99,7 @@ namespace MinorTaskService.WebApi.Services
             await _context.SaveChangesAsync(cancellationToken);
         }
         
+
         public async Task UpdateMinorTaskStatusAsync(Guid minorTaskId, Guid statusId, CancellationToken cancellationToken)
         {
             var minorTask = await _context.MinorTasks.FindAsync(minorTaskId,cancellationToken);
@@ -151,9 +152,7 @@ namespace MinorTaskService.WebApi.Services
                 .Include(mt => mt.Status)
                 .AsQueryable();
 
-            // По умолчанию показывать только задачи «в поиске». Если нужен показ всех —
-            // убери эту строку. Если фронт прислал конкретный статус — он переопределит ниже.
-            query = query.Where(mt => mt.StatusId == StatusType.InSearch);
+            query = query.Where(mt => mt.StatusId == StatusType.InSearch || mt.StatusId == StatusType.InProgress);
 
             // Поиск по названию (подстрока, регистронезависимо на уровне БД (ILIKE в PG))
             if (!string.IsNullOrWhiteSpace(search))
@@ -174,8 +173,7 @@ namespace MinorTaskService.WebApi.Services
             {
                 "reward" => query.OrderByDescending(mt => mt.Encouragement).ThenBy(mt => mt.Id),
                 "volunteers" => query.OrderByDescending(mt => mt.NumberVolunteers).ThenBy(mt => mt.Id),
-                // newest по умолчанию: если есть CreatedAt — лучше по нему; иначе по Id
-                _ => query.OrderByDescending(mt => mt.Id),
+                _ => query.OrderByDescending(mt => mt.CreatedAt),
             };
 
             var total = await query.CountAsync(cancellationToken);

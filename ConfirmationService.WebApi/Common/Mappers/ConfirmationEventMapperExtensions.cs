@@ -24,6 +24,7 @@ public static class ConfirmationEventMapperExtensions
         new()
         {
             ReviewerId = e.ReviewerId.ToString(),
+            ConfirmationType = e.ConfirmationType,
             EntityId = e.EntityId.ToString(),
             ConfirmationId = e.ConfirmationId.ToString(),
             InitiatorId = e.InitiatorId.ToString(),

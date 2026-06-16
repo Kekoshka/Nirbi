@@ -15,7 +15,7 @@ public static class KafkaConsumersRegistration
         ExternalServicesOptions options)
     {
         services.AddHostedService(sp => new GenericConsumer<ConfirmationCreated>(
-            topic: options.ConfirmationServiceTopic,
+            topic: "ConfirmationCreated",
             hubMethod: "ShowConfirmationCreated",
             eventMapper: msg => msg.ToEvent(),
             recipientResolver: (msg) => msg.ReviewerId,
@@ -27,7 +27,7 @@ public static class KafkaConsumersRegistration
         ));
 
         services.AddHostedService(sp => new GenericConsumer<ConfirmationRespond>(
-            topic: options.ConfirmationServiceTopic,
+            topic: "ConfirmationRespond",
             hubMethod: "ShowConfirmationRespond",
             eventMapper: msg => msg.ToEvent(),
             recipientResolver: (msg) => msg.InitiatorId,
@@ -39,7 +39,7 @@ public static class KafkaConsumersRegistration
         ));
 
         services.AddHostedService(sp => new GenericConsumer<ConfirmationRevoked>(
-            topic: options.ConfirmationServiceTopic,
+            topic: "ConfirmationRevoked",
             hubMethod: "ShowConfirmationRevoked",
             eventMapper: msg => msg.ToEvent(),
             recipientResolver: (msg) => msg.ReviewerId,

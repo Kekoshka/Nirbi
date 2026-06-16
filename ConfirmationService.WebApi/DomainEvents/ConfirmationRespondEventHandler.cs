@@ -23,7 +23,7 @@ namespace ConfirmationService.WebApi.DomainEvents
         public async Task Handle(ConfirmationRespondEvent domainEvent, CancellationToken cancellationToken = default)
         {
             await _kafkaService.ProduceAsync(
-                _externalServicesOptoins.ConfirmationServiceTopic,
+                "ConfirmationRespond",
                 domainEvent.ConfirmationId.ToString(),
                 domainEvent.ToAvro(),
                 cancellationToken);

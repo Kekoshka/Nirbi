@@ -7,106 +7,150 @@
 // ------------------------------------------------------------------------------
 namespace NotificationService.WebApi.Common.AvroSchemas
 {
-	using System;
-	using System.Collections.Generic;
-	using System.Text;
-	using global::Avro;
-	using global::Avro.Specific;
-	
-	[global::System.CodeDom.Compiler.GeneratedCodeAttribute("avrogen", "1.12.1+9110c693767c1dde2665b2b57939333478b12036")]
-	public partial class ConfirmationRespond : global::Avro.Specific.ISpecificRecord
-	{
-		public static global::Avro.Schema _SCHEMA = global::Avro.Schema.Parse(@"{""type"":""record"",""name"":""ConfirmationRespond"",""namespace"":""ConfirmationService"",""fields"":[{""name"":""ConfirmationId"",""type"":""string""},{""name"":""InitiatorId"",""type"":""string""},{""name"":""IsAccepted"",""type"":""boolean""},{""name"":""EventId"",""type"":""string""},{""name"":""OccurredOn"",""type"":""long""}]}");
-		private string _ConfirmationId;
-		private string _InitiatorId;
-		private bool _IsAccepted;
-		private string _EventId;
-		private long _OccurredOn;
-		public virtual global::Avro.Schema Schema
-		{
-			get
-			{
-				return ConfirmationRespond._SCHEMA;
-			}
-		}
-		public string ConfirmationId
-		{
-			get
-			{
-				return this._ConfirmationId;
-			}
-			set
-			{
-				this._ConfirmationId = value;
-			}
-		}
-		public string InitiatorId
-		{
-			get
-			{
-				return this._InitiatorId;
-			}
-			set
-			{
-				this._InitiatorId = value;
-			}
-		}
-		public bool IsAccepted
-		{
-			get
-			{
-				return this._IsAccepted;
-			}
-			set
-			{
-				this._IsAccepted = value;
-			}
-		}
-		public string EventId
-		{
-			get
-			{
-				return this._EventId;
-			}
-			set
-			{
-				this._EventId = value;
-			}
-		}
-		public long OccurredOn
-		{
-			get
-			{
-				return this._OccurredOn;
-			}
-			set
-			{
-				this._OccurredOn = value;
-			}
-		}
-		public virtual object Get(int fieldPos)
-		{
-			switch (fieldPos)
-			{
-			case 0: return this.ConfirmationId;
-			case 1: return this.InitiatorId;
-			case 2: return this.IsAccepted;
-			case 3: return this.EventId;
-			case 4: return this.OccurredOn;
-			default: throw new global::Avro.AvroRuntimeException("Bad index " + fieldPos + " in Get()");
-			};
-		}
-		public virtual void Put(int fieldPos, object fieldValue)
-		{
-			switch (fieldPos)
-			{
-			case 0: this.ConfirmationId = (System.String)fieldValue; break;
-			case 1: this.InitiatorId = (System.String)fieldValue; break;
-			case 2: this.IsAccepted = (System.Boolean)fieldValue; break;
-			case 3: this.EventId = (System.String)fieldValue; break;
-			case 4: this.OccurredOn = (System.Int64)fieldValue; break;
-			default: throw new global::Avro.AvroRuntimeException("Bad index " + fieldPos + " in Put()");
-			};
-		}
-	}
+    using System;
+    using System.Collections.Generic;
+    using System.Text;
+    using global::Avro;
+    using global::Avro.Specific;
+
+    [global::System.CodeDom.Compiler.GeneratedCodeAttribute("avrogen", "1.12.1+9110c693767c1dde2665b2b57939333478b12036")]
+    public partial class ConfirmationRespond : global::Avro.Specific.ISpecificRecord
+    {
+        public static global::Avro.Schema _SCHEMA = global::Avro.Schema.Parse(@"{""type"":""record"",""name"":""ConfirmationRespond"",""namespace"":""ConfirmationService"",""fields"":[{""name"":""ConfirmationId"",""type"":""string""},{""name"":""ConfirmationType"",""default"":"""",""type"":""string""},{""name"":""EntityId"",""type"":""string""},{""name"":""InitiatorId"",""type"":""string""},{""name"":""ReviewerId"",""type"":""string""},{""name"":""IsAccepted"",""type"":""boolean""},{""name"":""EventId"",""type"":""string""},{""name"":""OccurredOn"",""type"":""long""}]}");
+        private string _ConfirmationId;
+        private string _ConfirmationType;
+        private string _EntityId;
+        private string _InitiatorId;
+        private string _ReviewerId;
+        private bool _IsAccepted;
+        private string _EventId;
+        private long _OccurredOn;
+        public virtual global::Avro.Schema Schema
+        {
+            get
+            {
+                return ConfirmationRespond._SCHEMA;
+            }
+        }
+        public string ConfirmationId
+        {
+            get
+            {
+                return this._ConfirmationId;
+            }
+            set
+            {
+                this._ConfirmationId = value;
+            }
+        }
+        public string ConfirmationType
+        {
+            get
+            {
+                return this._ConfirmationType;
+            }
+            set
+            {
+                this._ConfirmationType = value;
+            }
+        }
+        public string EntityId
+        {
+            get
+            {
+                return this._EntityId;
+            }
+            set
+            {
+                this._EntityId = value;
+            }
+        }
+        public string InitiatorId
+        {
+            get
+            {
+                return this._InitiatorId;
+            }
+            set
+            {
+                this._InitiatorId = value;
+            }
+        }
+        public string ReviewerId
+        {
+            get
+            {
+                return this._ReviewerId;
+            }
+            set
+            {
+                this._ReviewerId = value;
+            }
+        }
+        public bool IsAccepted
+        {
+            get
+            {
+                return this._IsAccepted;
+            }
+            set
+            {
+                this._IsAccepted = value;
+            }
+        }
+        public string EventId
+        {
+            get
+            {
+                return this._EventId;
+            }
+            set
+            {
+                this._EventId = value;
+            }
+        }
+        public long OccurredOn
+        {
+            get
+            {
+                return this._OccurredOn;
+            }
+            set
+            {
+                this._OccurredOn = value;
+            }
+        }
+        public virtual object Get(int fieldPos)
+        {
+            switch (fieldPos)
+            {
+                case 0: return this.ConfirmationId;
+                case 1: return this.ConfirmationType;
+                case 2: return this.EntityId;
+                case 3: return this.InitiatorId;
+                case 4: return this.ReviewerId;
+                case 5: return this.IsAccepted;
+                case 6: return this.EventId;
+                case 7: return this.OccurredOn;
+                default: throw new global::Avro.AvroRuntimeException("Bad index " + fieldPos + " in Get()");
+            }
+            ;
+        }
+        public virtual void Put(int fieldPos, object fieldValue)
+        {
+            switch (fieldPos)
+            {
+                case 0: this.ConfirmationId = (System.String)fieldValue; break;
+                case 1: this.ConfirmationType = (System.String)fieldValue; break;
+                case 2: this.EntityId = (System.String)fieldValue; break;
+                case 3: this.InitiatorId = (System.String)fieldValue; break;
+                case 4: this.ReviewerId = (System.String)fieldValue; break;
+                case 5: this.IsAccepted = (System.Boolean)fieldValue; break;
+                case 6: this.EventId = (System.String)fieldValue; break;
+                case 7: this.OccurredOn = (System.Int64)fieldValue; break;
+                default: throw new global::Avro.AvroRuntimeException("Bad index " + fieldPos + " in Put()");
+            }
+            ;
+        }
+    }
 }

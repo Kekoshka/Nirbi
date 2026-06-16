@@ -64,9 +64,6 @@ public class ConfirmationService : IConfirmationService
         if (confirmation == null)
             throw new NotFoundException($"Confirmation with id {confirmationId} not found");
 
-        // FIX: было `userId != Reviewer || userId != Initiator` Ч это всегда true
-        // (нельз€ быть и тем и другим), из-за чего метод всегда кидал Forbidden.
-        // ƒоступ есть, если пользователь Ч Ћ»Ѕќ reviewer, Ћ»Ѕќ initiator.
         var userId = _currentUserService.GetUserId();
         if (userId != confirmation.ReviewerId &&
             userId != confirmation.InitiatorId)
@@ -77,16 +74,11 @@ public class ConfirmationService : IConfirmationService
 
     public async Task<ICollection<ConfirmationDTO>> GetConfirmationsByReviewerAsync()
     {
-        // FIX: убран фильтр `Status == Created`. Reviewer должен видеть все свои
-        // подтверждени€ (включа€ прин€тые/отклонЄнные/отозванные/истЄкшие) Ч
-        // так же, как initiator. »наче истори€ пропадает, а у приглашений
-        // (Invite to task, где reviewer = приглашЄнный) после ответа исчезает запись.
         var confirmations = await _context.Confirmations
             .Where(c => c.ReviewerId == _currentUserService.GetUserId())
             .Include(c => c.Audits)
             .ToListAsync();
 
-        // ToListAsync никогда не возвращает null Ч пустой список это валидный результат.
         return confirmations.ToConfirmationsDTO();
     }
 
@@ -98,6 +90,15 @@ public class ConfirmationService : IConfirmationService
             .ToListAsync();
 
         return confirmations.ToConfirmationsDTO();
+    }
+    public async Task<ConfirmationDTO> GetConfirmationsByEntityId(Guid entityId)
+    {
+        var confirmation = await _context.Confirmations
+            .FirstOrDefaultAsync(c => c.EntityId == entityId);
+        if (confirmation is null)
+            throw new NotFoundException();
+
+        return confirmation.ToConfirmationDTO();
     }
 
     public async Task RespondToConfirmationAsync(RespondToConfirmationDTO dto)

@@ -24,8 +24,8 @@ namespace ConfirmationService.WebApi.Common.Mappers
             );
         }
 
-        public static List<ConfirmationDTO> ToConfirmationsDTO(this List<Confirmation> value) =>
-            value.Select(value => new ConfirmationDTO
+        public static ConfirmationDTO ToConfirmationDTO(this Confirmation value) =>
+            new ConfirmationDTO
             {
                 Id = value.Id,
                 ConfirmationType = value.ConfirmationType,
@@ -48,6 +48,9 @@ namespace ConfirmationService.WebApi.Common.Mappers
                 ReviewerId = value.ReviewerId,
                 Status = value.Status
 
-            }).ToList();
+            };
+
+        public static List<ConfirmationDTO> ToConfirmationsDTO(this List<Confirmation> value) =>
+            value.Select(value => value.ToConfirmationDTO()).ToList();
     }
 }

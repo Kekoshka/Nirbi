@@ -46,8 +46,8 @@ public class ConfirmationsController : ControllerBase
     /// <summary>
     /// Получить свои подтверждения по id рецензента
     /// </summary>
-    [HttpGet("reviewer/{reviewerId}")]
-    public async Task<IActionResult> GetByReviewer(Guid reviewerId)
+    [HttpGet("reviewer")]
+    public async Task<IActionResult> GetByReviewer()
     {
         var confirmations = await _confirmationService.GetConfirmationsByReviewerAsync();
         return Ok(confirmations);
@@ -57,11 +57,18 @@ public class ConfirmationsController : ControllerBase
     /// <summary>
     /// Получить свои подтверждения по id инициатора
     /// </summary>
-    [HttpGet("initiator/{initiatorId}")]
-    public async Task<IActionResult> GetByInitiator(Guid initiatorId)
+    [HttpGet("initiator")]
+    public async Task<IActionResult> GetByInitiator()
     {
         var confirmations = await _confirmationService.GetConfirmationsByInitiatorAsync();
         return Ok(confirmations);
+    }
+
+    [HttpGet("entity/{entityId}")]
+    public async Task<IActionResult> GetByEntityId(Guid entityId)
+    {
+        var confirmation = await _confirmationService.GetConfirmationsByEntityId(entityId);
+        return Ok(confirmation);
     }
 
     /// <summary>

@@ -100,8 +100,8 @@ async function loadAll() {
     // Gateway-агрегатор уже возвращает EnrichedConfirmationResponse:
     // entityName + initiatorUsername + reviewerUsername. Доп. запросов не нужно.
     const [inc, out] = await Promise.all([
-      confirmationsApi.getByReviewer(currentUserId).catch(() => []),
-      confirmationsApi.getByInitiator(currentUserId).catch(() => []),
+      confirmationsApi.getByReviewer().catch(() => []),
+      confirmationsApi.getByInitiator().catch(() => []),
     ]);
     // Пропускаем оба типа: отклики (Respond) и приглашения (Invite).
     const allowedType = t => !t

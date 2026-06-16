@@ -67,14 +67,22 @@ namespace NotificationService.WebApi.Services.BackgroundServices
                 SubjectNameStrategy = SubjectNameStrategy.Record
             };
 
-            _consumer = new ConsumerBuilder<string, TMessage>(consumerConfig)
+            try
+            {
+                _consumer = new ConsumerBuilder<string, TMessage>(consumerConfig)
                 .SetKeyDeserializer(Deserializers.Utf8)
-                .SetValueDeserializer(new AvroDeserializer<TMessage>(_schemaRegistry,avroConfig).AsSyncOverAsync<TMessage>())
+                .SetValueDeserializer(new AvroDeserializer<TMessage>(_schemaRegistry, avroConfig).AsSyncOverAsync<TMessage>())
                 .SetErrorHandler((_, e) =>
                 {
                     _logger.LogError("Kafka error: {Reason}", e.Reason);
                 })
                 .Build();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex.Message);
+            }
+            
         }
 
         protected override Task ExecuteAsync(CancellationToken stoppingToken)

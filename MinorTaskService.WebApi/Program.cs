@@ -17,7 +17,11 @@ builder.Services.Configure<ExternalServicesOptions>(
     builder.Configuration.GetSection(nameof(ExternalServicesOptions)));
 builder.Services.Configure<DefaultDataOptions>(
     builder.Configuration.GetSection(nameof(DefaultDataOptions)));
+builder.Services.Configure<KafkaConsumersOptions>(
+    builder.Configuration.GetSection(nameof(KafkaConsumersOptions)));
 
+
+builder.Services.AddSchemaRegistryClient(builder.Configuration);
 builder.Services.AddHostedService<HostedBase>();
 builder.Services.AddNirbiServiceAuth(builder.Configuration);
 builder.Services.AddRefit(builder.Configuration);

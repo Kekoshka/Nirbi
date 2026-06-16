@@ -1,4 +1,5 @@
-﻿using ExceptionHandler.Exceptions;
+﻿using Confluent.SchemaRegistry;
+using ExceptionHandler.Exceptions;
 using Microsoft.EntityFrameworkCore;
 using MinorTaskService.DataAccess.Postgres.Context;
 using MinorTaskService.WebApi.Common.DataSeed;
@@ -53,6 +54,18 @@ namespace MinorTaskService.WebApi.Common.Extensions
                     .ConfigureHttpClient(c => c.BaseAddress = new Uri(baseAddress))
                     .AddHttpMessageHandler<ServiceAccessTokenDelegatingHandler>();
             }
+        }
+
+        /// <summary>
+        /// Расширение для настройки клиента schema registry
+        /// </summary>
+        public static void AddSchemaRegistryClient(this IServiceCollection services, IConfiguration configuration)
+        {
+            services.AddSingleton<ISchemaRegistryClient>(sp =>
+                new CachedSchemaRegistryClient(new SchemaRegistryConfig
+                {
+                    Url = configuration.GetSection(nameof(ExternalServicesOptions)).GetValue<string>(nameof(ExternalServicesOptions.SchemaRegistryAddress))
+                }));
         }
     }
 }

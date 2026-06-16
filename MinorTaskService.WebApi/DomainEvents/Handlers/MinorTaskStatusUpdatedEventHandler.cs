@@ -22,7 +22,7 @@ namespace MinorTaskService.WebApi.DomainEvents.Handlers
         public async Task Handle(MinorTaskStatusUpdatedEvent domainEvent, CancellationToken cancellationToken = default)
         {
             await _kafkaService.ProduceAsync(
-                _externalServicesOptoins.MinorTaskServiceTopic,
+                "MinorTaskStatusUpdated",
                 domainEvent.MinorTaskId.ToString(),
                 domainEvent.ToAvro(),
                 cancellationToken);

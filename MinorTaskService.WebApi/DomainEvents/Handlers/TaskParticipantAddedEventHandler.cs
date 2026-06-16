@@ -21,7 +21,7 @@ namespace MinorTaskService.WebApi.DomainEvents.Handlers
         public async Task Handle(TaskParticipantAddedEvent domainEvent, CancellationToken cancellationToken = default)
         {
             await _kafkaService.ProduceAsync(
-                _externalServicesOptoins.TaskParticipantServiceTopic,
+                "TaskParticipantAdded",
                 domainEvent.MinorTaskId.ToString(),
                 domainEvent.ToAvro(),
                 cancellationToken);

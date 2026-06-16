@@ -104,16 +104,6 @@ public class MinorTasksController : ControllerBase
         return NoContent();
     }
 
-    [HttpDelete("tasks/{minorTaskId:guid}/participants/{participantId:guid}")]
-    public async Task<IActionResult> DeleteTaskParticipant(
-        Guid minorTaskId,
-        Guid participantId,
-        CancellationToken cancellationToken)
-    {
-        await _mediator.Send(new DeleteMinorTaskParticipantCommand(minorTaskId, participantId), cancellationToken);
-        return NoContent();
-    }
-
     /// <summary>Батч: по списку ID задач вернуть их FileCollectionId.</summary>
     [HttpPost("tasks/collections")]
     public async Task<IActionResult> GetTaskCollections(

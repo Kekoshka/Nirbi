@@ -9,6 +9,11 @@
       "logicalType": "uuid"
     },
     {
+      "name": "ConfirmationType",
+      "type": "string",
+      "default": ""
+    },
+    {
       "name": "EntityId",
       "type": "string",
       "logicalType": "uuid"

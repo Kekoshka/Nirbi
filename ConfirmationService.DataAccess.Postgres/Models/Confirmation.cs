@@ -107,7 +107,7 @@ public class Confirmation : IHasDomainEvents
             RespondedAt = DateTime.UtcNow;
         }
 
-        _domainEvents.Add(new ConfirmationRespondEvent(Id, InitiatorId, ReviewerId,EntityId, isAccepted));
+        _domainEvents.Add(new ConfirmationRespondEvent(Id,ConfirmationType, InitiatorId, ReviewerId,EntityId, isAccepted));
     }
 
     public void Revoke(Guid initiatorId)

@@ -7,11 +7,11 @@ export const confirmationsApi = {
   getById(id) {
     return api.get(`/api/Confirmations/${id}`);
   },
-  getByReviewer(reviewerId) {
-    return api.get(`/api/Confirmations/reviewer/${reviewerId}`);
+  getByReviewer() {
+  return api.get('/api/Confirmations/reviewer');
   },
-  getByInitiator(initiatorId) {
-    return api.get(`/api/Confirmations/initiator/${initiatorId}`);
+  getByInitiator() {
+    return api.get('/api/Confirmations/initiator');
   },
   respond(confirmationId, isAccepted, rejectionReason = null) {
     return api.post(`/api/Confirmations/${confirmationId}/respond`, { isAccepted, rejectionReason });

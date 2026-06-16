@@ -10,7 +10,7 @@
     },
     {
       "name": "ConfirmationType",
-      "type": "string"
+      "type": "string",
     },
     {
       "name": "EntityId",

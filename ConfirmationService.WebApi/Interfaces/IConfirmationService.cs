@@ -17,7 +17,7 @@ namespace ConfirmationService.WebApi.Services
         Task<ICollection<ConfirmationDTO>> GetConfirmationsByReviewerAsync();
         
         Task<ICollection<ConfirmationDTO>> GetConfirmationsByInitiatorAsync();
-        
+        Task<ConfirmationDTO> GetConfirmationsByEntityId(Guid entityId);
         Task RespondToConfirmationAsync(RespondToConfirmationDTO dto);
         
         Task RevokeConfirmationAsync(Guid confirmationId);
