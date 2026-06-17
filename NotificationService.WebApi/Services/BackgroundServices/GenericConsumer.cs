@@ -13,7 +13,7 @@ namespace NotificationService.WebApi.Services.BackgroundServices;
 public class GenericConsumer<TAvroMessage> : ConsumerBase<TAvroMessage>
     where TAvroMessage : class, ISpecificRecord
 {
-    private readonly Func<TAvroMessage, string?> _recipientResolver;
+    private readonly Func<TAvroMessage, List<string>?> _recipientResolver;
     private readonly Func<TAvroMessage, object> _eventMapper;
     private readonly string _hubMethod;
     private readonly string _topic;
@@ -27,7 +27,7 @@ public class GenericConsumer<TAvroMessage> : ConsumerBase<TAvroMessage>
         string topic,
         string hubMethod,
         Func<TAvroMessage, object> eventMapper,
-        Func<TAvroMessage, string?> recipientResolver)
+        Func<TAvroMessage, List<string>?> recipientResolver)
         : base(externalServicesOptions, kafkaConsumersOptions, schemaRegistryClient, hub, logger)
     {
         _topic = topic;
@@ -63,7 +63,7 @@ public class GenericConsumer<TAvroMessage> : ConsumerBase<TAvroMessage>
 
                     var json = JsonSerializer.Serialize(_eventMapper(message));
                     await _hub.Clients
-                        .User(recipientId)
+                        .Users(recipientId)
                         .SendAsync(_hubMethod, json, cancellationToken);
                 }
                 catch (ConsumeException ex) when (ex.Error.Code == ErrorCode.UnknownTopicOrPart)
