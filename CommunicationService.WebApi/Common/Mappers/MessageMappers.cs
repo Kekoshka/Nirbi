@@ -21,8 +21,8 @@ namespace CommunicationService.WebApi.Common.Mappers
         public static GetPreviewMessagesResponse ToGetPreviewMessagesResponse(this Message value) =>
             new GetPreviewMessagesResponse(
                 value.Id,
-                value.Sender,
                 value.ChatId,
+                value.Sender,
                 value.CreatedAt,
                 value.Content);
 
