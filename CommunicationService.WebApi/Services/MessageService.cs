@@ -39,7 +39,10 @@ namespace CommunicationService.WebApi.Services
                 currentUserId,
                 request.ChatId,
                 request.Content,
-                existedChat.ChatUsers.Select(cu => cu.UserId).ToList());
+                existedChat.ChatUsers
+                    .Where(cu => cu.UserId != currentUserId)
+                    .Select(cu => cu.UserId)
+                    .ToList());
             _context.Messages.Add(message);
             await _context.SaveChangesAsync(cancellationToken);
 
@@ -51,7 +54,11 @@ namespace CommunicationService.WebApi.Services
             var currentUserId = _currentUserService.GetUserId();
             var existedChat = await _context.Chats
                 .Include(c => c.ChatUsers)
-                .FirstOrDefaultAsync(c => c.ChatUsers.Any(u => u.UserId == request.Recipient) && c.ChatUsers.Any(u => u.UserId == currentUserId));
+                .FirstOrDefaultAsync(c =>
+                    c.ChatTypeId == Common.Enums.ChatType.Private &&
+                    c.ChatUsers.Any(u => u.UserId == request.Recipient && !u.IsDeleted) &&
+                    c.ChatUsers.Any(u => u.UserId == currentUserId && !u.IsDeleted),
+                    cancellationToken);
             if (existedChat is null)
             {
                 var chatId = await _chatService.CreateChatAsync(
@@ -68,10 +75,13 @@ namespace CommunicationService.WebApi.Services
             Message message = new(currentUserId,
                 existedChat!.Id,
                 request.Content,
-                existedChat.ChatUsers.Select(cu => cu.UserId).ToList());
+                existedChat.ChatUsers
+                    .Where(cu => cu.UserId != currentUserId)
+                    .Select(cu => cu.UserId)
+                    .ToList());
 
             _context.Messages.Add(message);
-            await _context.SaveChangesAsync();
+            await _context.SaveChangesAsync(cancellationToken);
 
             return message.Id;
         }
@@ -86,7 +96,12 @@ namespace CommunicationService.WebApi.Services
             if (existedMessage is null)
                 throw new NotFoundException("Сообщение не найдено!");
             
-            existedMessage.UpdateMessage(request.Content, existedMessage.Chat.ChatUsers.Select(cu => cu.UserId).ToList());
+            existedMessage.UpdateMessage(
+                request.Content, 
+                existedMessage.Chat.ChatUsers
+                    .Where(cu => cu.UserId != currentUserId)
+                    .Select(cu => cu.UserId)
+                    .ToList());
             await _context.SaveChangesAsync(cancellationToken);
         }
         
@@ -100,7 +115,11 @@ namespace CommunicationService.WebApi.Services
             if (existedMessage is null)
                 throw new NotFoundException("Сообщение не найдено!");
 
-            existedMessage.RemoveMessage(existedMessage.Chat.ChatUsers.Select(cu => cu.UserId).ToList());
+            existedMessage.RemoveMessage(
+                existedMessage.Chat.ChatUsers
+                    .Where(cu => cu.UserId != currentUserId)
+                    .Select(cu => cu.UserId)
+                    .ToList());
             await _context.SaveChangesAsync(cancellationToken);
         }
 

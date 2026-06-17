@@ -25,14 +25,15 @@ namespace CommunicationService.WebApi.Services
             if (users.Count != 2)
                 throw new BadRequestException("В частном чате должно быть 2 пользователя!");
 
-            var existedChat = _context.Chats
+            var existedChat = await _context.Chats
                 .Include(c => c.ChatUsers)
-                .FirstOrDefault(c => 
-                    c.ChatUsers.Any(u => u.UserId == users[0]) &&
-                    c.ChatUsers.Any(u => u.UserId == users[1]) &&
-                    c.ChatTypeId == Common.Enums.ChatType.Private);
+                .FirstOrDefaultAsync(c =>
+                    c.ChatTypeId == Common.Enums.ChatType.Private &&
+                    c.ChatUsers.Any(u => u.UserId == users[0] && !u.IsDeleted) &&
+                    c.ChatUsers.Any(u => u.UserId == users[1] && !u.IsDeleted),
+                    cancellationToken);
             if (existedChat != null)
-                throw new NotFoundException("Чат между пользователями уже существует!");
+                return existedChat.Id;
 
             Chat chat = new(
                 string.Empty,

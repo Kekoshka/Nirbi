@@ -34,6 +34,7 @@ let previews     = new Map();   // chatId → GetPreviewMessagesResponse
 let activeChatId = null;        // ID открытого чата
 let messages     = [];          // GetMessagesResponse[] текущего чата
 let editingId    = null;        // ID редактируемого сообщения
+let sending      = false;       // защита от двойной отправки
 
 // ── DOM ───────────────────────────────────────────────────────────────────────
 const chatList      = document.getElementById('chat-list');
@@ -120,6 +121,42 @@ function collectAllUserIds() {
 function isGuid(s) {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(s ?? ''));
 }
+
+function findPrivateChatWithUser(otherUserId) {
+  if (!otherUserId) return null;
+  const other = String(otherUserId);
+  const me = String(currentUserId);
+  return chats.find(c =>
+    !c._draft &&
+    c.chatTypeId === PRIVATE_CHAT_TYPE_ID &&
+    (c.chatUsers || []).map(String).includes(other) &&
+    (c.chatUsers || []).map(String).includes(me)
+  ) ?? null;
+}
+
+function parsePayload(payload) {
+  if (!payload) return null;
+  if (typeof payload === 'string') {
+    try { return JSON.parse(payload); } catch { return null; }
+  }
+  return payload;
+}
+
+function isActiveChat(chatId) {
+  if (!activeChatId || !chatId) return false;
+  const active = String(activeChatId);
+  const incoming = String(chatId);
+  if (active === incoming) return true;
+  // draft-чат: совпадение по собеседнику
+  if (active.startsWith('draft_')) {
+    const draft = chats.find(c => String(c.id) === active);
+    const chat = chats.find(c => String(c.id) === incoming);
+    if (!draft?._recipientId || !chat) return false;
+    return (chat.chatUsers || []).map(String).includes(String(draft._recipientId));
+  }
+  return false;
+}
+
 const taskNameCache = new Map();
 
 
@@ -402,6 +439,7 @@ function hideEditBanner() {
 btnCancelEdit?.addEventListener('click', () => {
   hideEditBanner();
   msgInput.value = '';
+  resizeMsgInput();
   msgInput.focus();
 });
 
@@ -425,13 +463,29 @@ async function confirmDelete(msgId) {
 // ── Send ──────────────────────────────────────────────────────────────────────
 async function sendMessage() {
   const text = msgInput.value.trim();
-  if (!text || !activeChatId) return;
+  if (!text || !activeChatId || sending) return;
 
-  const chat = chats.find(c => String(c.id) === activeChatId);
+  const chat = chats.find(c => String(c.id) === String(activeChatId));
   if (!chat) return;
 
+  sending = true;
   btnSend.disabled = true;
   try {
+    // Черновик личного чата — одна отправка, без дублирования обработчиков
+    if (chat._draft) {
+      const recipientId = chat._recipientId;
+      await chatApi.sendPrivateMessage(recipientId, text);
+      msgInput.value = '';
+      resizeMsgInput();
+
+      chats = chats.filter(c => !c._draft);
+      await loadChats();
+
+      const real = findPrivateChatWithUser(recipientId);
+      if (real) await openChat(real.id);
+      return;
+    }
+
     if (editingId) {
       // Редактирование
       await chatApi.updateMessage(editingId, text);
@@ -475,9 +529,11 @@ async function sendMessage() {
       renderChatList();
     }
     msgInput.value = '';
+    resizeMsgInput();
   } catch (e) {
     toast.error(e.message || 'Не удалось отправить сообщение');
   } finally {
+    sending = false;
     btnSend.disabled = false;
     msgInput.focus();
   }
@@ -489,7 +545,14 @@ msgInput?.addEventListener('keydown', e => {
 });
 
 // ── DOM helpers ───────────────────────────────────────────────────────────────
+function clearMsgPlaceholder() {
+  if (msgContainer.querySelector('.msg-empty, .msg-loading, .msg-error')) {
+    msgContainer.innerHTML = '';
+  }
+}
+
 function appendMessageToDOM(msg, isMine) {
+  clearMsgPlaceholder();
   const wrapper = document.createElement('div');
   wrapper.innerHTML = renderMessage(msg, isMine);
   while (wrapper.firstChild) msgContainer.appendChild(wrapper.firstChild);
@@ -509,110 +572,120 @@ function updateMessageInDom(msg) {
 // ── SignalR handlers ──────────────────────────────────────────────────────────
 
 onNotification('ChatCreated', async payload => {
-  if (!payload) return;
-  if (chats.some(c => String(c.id) === String(payload.Id))) return;
+  const p = parsePayload(payload);
+  if (!p) return;
+
+  const chatTypeId = String(p.ChatTypeId ?? p.chatTypeId ?? '');
+  const chatUsers = (p.ChatUsers ?? p.chatUsers ?? []).map(String);
+  const id = String(p.Id ?? p.id);
+
+  // Убираем черновики и дубликаты личных чатов с тем же собеседником
+  if (chatTypeId === String(PRIVATE_CHAT_TYPE_ID)) {
+    const otherId = chatUsers.find(u => u !== String(currentUserId));
+    chats = chats.filter(c => !c._draft);
+    const existing = findPrivateChatWithUser(otherId);
+    if (existing && String(existing.id) !== id) return;
+  }
+
+  if (chats.some(c => String(c.id) === id)) return;
 
   const newChat = {
-    id: payload.Id,
-    name: payload.Name,
-    chatTypeId: payload.ChatTypeId,
-    chatUsers: payload.ChatUsers || [],
+    id,
+    name: p.Name ?? p.name ?? '',
+    chatTypeId: p.ChatTypeId ?? p.chatTypeId,
+    chatUsers: p.ChatUsers ?? p.chatUsers ?? [],
   };
   chats.unshift(newChat);
 
   await Promise.all([
-    enrichNames((payload.ChatUsers || []).filter(id => !nameMap.has(String(id)))),
-    enrichTaskNames(), // <-- добавить
+    enrichNames(chatUsers.filter(uid => !nameMap.has(uid))),
+    enrichTaskNames(),
   ]);
   renderChatList();
 });
 
 onNotification('MessageCreated', payload => {
-  if (!payload) return;
-  const chatId  = String(payload.ChatId);
-  const msgId   = String(payload.Id);
-  const isMine  = String(payload.Sender) === String(currentUserId);
+  const p = parsePayload(payload);
+  if (!p) return;
 
-  // Дедупликация: такое сообщение уже есть?
-  if (String(activeChatId) === chatId) {
+  const chatId  = String(p.ChatId ?? p.chatId);
+  const msgId   = String(p.Id ?? p.id);
+  const isMine  = String(p.Sender ?? p.sender) === String(currentUserId);
+
+  if (isActiveChat(chatId)) {
     const existing = messages.findIndex(m => String(m.id) === msgId);
     if (existing !== -1) {
-      // Уже добавлено оптимистично — обновляем данные, если нужно
       if (messages[existing]._optimistic) {
-        messages[existing] = { ...messages[existing], ...normalizeMsg(payload), _optimistic: false };
+        messages[existing] = { ...messages[existing], ...normalizeMsg(p), _optimistic: false };
         updateMessageInDom(messages[existing]);
       }
-      return;
-    }
-
-    const msg = normalizeMsg(payload);
-    messages.push(msg);
-
-    enrichNames([String(msg.sender)].filter(id => !nameMap.has(id))).then(() => {
-      appendMessageToDOM(msg, isMine);
-      scrollToBottom(true);
-    });
-  } else {
-    // Чат не открыт — показываем уведомление
-    if (!isMine) {
-      const chat = chats.find(c => String(c.id) === chatId);
-      const chatTitle = chat ? getChatTitle(chat) : 'Чат';
-      const senderName = getDisplayName(payload.Sender);
-      toast.action({
-        type: 'info',
-        title: `${senderName} → ${chatTitle}`,
-        message: truncate(payload.Content, 80),
-        duration: 6000,
-        actions: [{
-          label: 'Открыть',
-          variant: 'primary',
-          onClick: (dismiss) => { dismiss(); openChat(chatId); },
-        }],
+    } else {
+      const msg = normalizeMsg(p);
+      messages.push(msg);
+      enrichNames([String(msg.sender)].filter(id => !nameMap.has(id))).then(() => {
+        clearMsgPlaceholder();
+        appendMessageToDOM(msg, isMine);
+        scrollToBottom(true);
       });
     }
+  } else if (!isMine) {
+    const chat = chats.find(c => String(c.id) === chatId);
+    const chatTitle = chat ? getChatTitle(chat) : 'Чат';
+    const senderName = getDisplayName(p.Sender ?? p.sender);
+    toast.action({
+      type: 'info',
+      title: `${senderName} → ${chatTitle}`,
+      message: truncate(p.Content ?? p.content, 80),
+      duration: 6000,
+      actions: [{
+        label: 'Открыть',
+        variant: 'primary',
+        onClick: (dismiss) => { dismiss(); openChat(chatId); },
+      }],
+    });
   }
 
-  // Обновляем превью в списке чатов
   previews.set(chatId, {
     chatId,
-    sender: payload.Sender,
-    content: payload.Content,
-    createdAt: payload.CreatedAt,
+    sender: p.Sender ?? p.sender,
+    content: p.Content ?? p.content,
+    createdAt: p.CreatedAt ?? p.createdAt,
   });
   renderChatList();
 });
 
 onNotification('MessageUpdated', payload => {
-  if (!payload) return;
-  const msgId = String(payload.Id);
-  const chatId = String(payload.ChatId);
+  const p = parsePayload(payload);
+  if (!p) return;
+  const msgId = String(p.Id ?? p.id);
+  const chatId = String(p.ChatId ?? p.chatId);
 
-  if (String(activeChatId) === chatId) {
+  if (isActiveChat(chatId)) {
     const idx = messages.findIndex(m => String(m.id) === msgId);
     if (idx === -1) return;
-    // Проверяем: уже обновлено оптимистично с тем же контентом?
-    if (messages[idx].content === payload.Content && messages[idx].isUpdated) return;
-    messages[idx] = { ...messages[idx], content: payload.Content, isUpdated: true };
+    const content = p.Content ?? p.content;
+    if (messages[idx].content === content && messages[idx].isUpdated) return;
+    messages[idx] = { ...messages[idx], content, isUpdated: true };
     updateMessageInDom(messages[idx]);
   }
 
-  // Обновляем превью если это последнее сообщение
-  const p = previews.get(chatId);
-  if (p && String(p.id) === msgId) {
-    previews.set(chatId, { ...p, content: payload.Content });
+  const pPreview = previews.get(chatId);
+  if (pPreview && String(pPreview.id) === msgId) {
+    previews.set(chatId, { ...pPreview, content: p.Content ?? p.content });
     renderChatList();
   }
 });
 
 onNotification('MessageDeleted', payload => {
-  if (!payload) return;
-  const msgId  = String(payload.Id);
-  const chatId = String(payload.ChatId);
+  const p = parsePayload(payload);
+  if (!p) return;
+  const msgId  = String(p.Id ?? p.id);
+  const chatId = String(p.ChatId ?? p.chatId);
 
-  if (String(activeChatId) === chatId) {
+  if (isActiveChat(chatId)) {
     const idx = messages.findIndex(m => String(m.id) === msgId);
     if (idx === -1) return;
-    if (messages[idx].isDeleted) return; // уже помечено
+    if (messages[idx].isDeleted) return;
     messages[idx] = { ...messages[idx], isDeleted: true };
     updateMessageInDom(messages[idx]);
   }
@@ -694,10 +767,17 @@ chatSearchInput?.addEventListener('input', () => {
 });
 
 // ── Textarea auto-grow ────────────────────────────────────────────────────────
-msgInput?.addEventListener('input', () => {
+function resizeMsgInput() {
+  if (!msgInput) return;
   msgInput.style.height = 'auto';
-  msgInput.style.height = Math.min(msgInput.scrollHeight, 160) + 'px';
-});
+  const h = Math.min(msgInput.scrollHeight, 160);
+  msgInput.style.height = h + 'px';
+  const singleLineMax = 46;
+  msgInput.classList.toggle('is-multiline', msgInput.scrollHeight > singleLineMax);
+}
+
+msgInput?.addEventListener('input', resizeMsgInput);
+resizeMsgInput();
 
 // ── Logout ────────────────────────────────────────────────────────────────────
 document.getElementById('btn-logout')?.addEventListener('click', async () => {
@@ -778,48 +858,4 @@ function activateDraftChat(draft) {
   messages = [];
   msgContainer.innerHTML = '<div class="msg-empty">Напишите первое сообщение, чтобы начать чат!</div>';
   msgInput.focus();
-
-  // При отправке первого сообщения через draft — используем recipientId
-  // Monkey-patch sendMessage для этого специального случая
-  const origSend = sendMessage;
-  const draftId = draft.id;
-  const recipientId = draft._recipientId;
-
-  // Перехватываем первую отправку
-  async function draftSend() {
-    const text = msgInput.value.trim();
-    if (!text) return;
-
-    btnSend.disabled = true;
-    try {
-      const msgId = await chatApi.sendPrivateMessage(recipientId, text);
-      // После создания чата SignalR пришлёт ChatCreated — обновляем данные
-      msgInput.value = '';
-      toast.info('Сообщение отправлено');
-      // Перезагружаем чаты — ChatCreated придёт через SignalR, но подстрахуемся
-      await loadChats();
-      // Открываем реальный чат
-      const real = chats.find(c =>
-        c.chatTypeId === PRIVATE_CHAT_TYPE_ID &&
-        (c.chatUsers || []).map(String).includes(String(recipientId))
-      );
-      if (real) openChat(real.id);
-    } catch (e) {
-      toast.error(e.message || 'Не удалось отправить сообщение');
-    } finally {
-      btnSend.disabled = false;
-    }
-  }
-
-  // Перекрываем обработчики для draft
-  const sendBtn = document.getElementById('btn-send');
-  const oldClick = sendBtn.onclick;
-
-  sendBtn.onclick = () => draftSend();
-  msgInput.onkeydown = e => {
-    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); draftSend(); }
-  };
-
-  // Восстановим стандартные обработчики после перехода на реальный чат
-  // (это произойдёт в openChat через переприсвоение элементов)
 }

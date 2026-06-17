@@ -55,8 +55,12 @@ export async function startNotifications() {
   // Привязываем обработчики для всех событий
   Object.keys(listeners).forEach(event => {
     connection.on(event, payload => {
+      let data = payload;
+      if (typeof payload === 'string') {
+        try { data = JSON.parse(payload); } catch { /* оставляем как есть */ }
+      }
       listeners[event].forEach(cb => {
-        try { cb(payload); } catch (e) { console.error(`[notifications] listener error [${event}]`, e); }
+        try { cb(data); } catch (e) { console.error(`[notifications] listener error [${event}]`, e); }
       });
     });
   });

@@ -47,8 +47,11 @@ namespace CommunicationService.WebApi.Controllers
             return Ok(messages);
         }
         [HttpGet("messages/preview")]
-        public async Task<IActionResult> GetPreviewMessagesAsync(List<Guid> chatIds, CancellationToken cancellationToken)
+        public async Task<IActionResult> GetPreviewMessagesAsync([FromQuery] List<Guid> chatIds, CancellationToken cancellationToken)
         {
+            if (chatIds is null || chatIds.Count == 0)
+                return Ok(Array.Empty<object>());
+
             var previewMessages = await _messageService.GetPreviewMessagesAsync(chatIds, cancellationToken);
             return Ok(previewMessages);
         }

@@ -444,8 +444,13 @@
   outline: none;
   min-height: 42px;
   max-height: 160px;
-  overflow-y: auto;
+  overflow-y: hidden;
+  overflow-x: hidden;
+  scrollbar-gutter: stable;
   transition: border-color var(--transition), box-shadow var(--transition);
+}
+.msg-textarea.is-multiline {
+  overflow-y: auto;
 }
 .msg-textarea:focus {
   border-color: var(--primary);
