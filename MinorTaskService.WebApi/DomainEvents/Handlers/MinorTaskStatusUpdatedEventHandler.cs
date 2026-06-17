@@ -10,13 +10,10 @@ namespace MinorTaskService.WebApi.DomainEvents.Handlers
     public class MinorTaskStatusUpdatedEventHandler : IDomainEventHandler<MinorTaskStatusUpdatedEvent>
     {
         IKafkaService _kafkaService;
-        ExternalServicesOptions _externalServicesOptoins;
         public MinorTaskStatusUpdatedEventHandler(
-            IKafkaService kafkaService,
-            IOptions<ExternalServicesOptions> externalServicesOptoins)
+            IKafkaService kafkaService)
         {
             _kafkaService = kafkaService;
-            _externalServicesOptoins = externalServicesOptoins.Value;
         }
 
         public async Task Handle(MinorTaskStatusUpdatedEvent domainEvent, CancellationToken cancellationToken = default)

@@ -6,6 +6,7 @@ import { confirmationsApi } from './confirmationsApi.js';
 import { openUserProfile } from './userProfileModal.js';
 import { startNotifications } from './notifications.js';
 import { CONFIRMATION_TYPES, CONFIRMATION_DEFAULT_EXPIRATION_HOURS } from './config.js';
+import { chatApi }     from './chatApi.js';
 
 // ── Guard ────────────────────────────────────────────────────────────────────
 if (!tokenStore.hasSession()) {
@@ -86,6 +87,9 @@ function render() {
 
   if (!items.length) {
     grid.innerHTML = '';
+    grid.querySelectorAll('.user-btn-chat').forEach(b => {
+      b.addEventListener('click', () => openChatWith(b.dataset.id));
+    });
     emptyEl.hidden = false;
     updatePager();
     return;
@@ -109,6 +113,12 @@ function render() {
         </div>
         <div class="user-actions">
           <button class="btn-secondary user-btn-view" data-id="${id}">Профиль</button>
+          <button class="user-btn-chat" data-id="${id}" title="Написать сообщение">
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+              <path d="M2 3a1.5 1.5 0 0 1 1.5-1.5h9A1.5 1.5 0 0 1 14 3v7a1.5 1.5 0 0 1-1.5 1.5H5l-3 3V3z"/>
+            </svg>
+            Написать
+          </button>
           <button class="btn-primary user-btn-invite" data-id="${id}" style="width:auto;padding:0 1rem;height:36px;">
             <span class="btn-label">Пригласить</span>
           </button>
@@ -146,6 +156,13 @@ function openProfileWithInvite(userId, user) {
   openUserProfile(userId, {
     fallbackName: user ? fullName(user) : '',
     action: {
+      label: 'Написать',
+      onClick: async (closeProfile) => {
+        closeProfile();
+        openChatWith(userId);
+      },
+    },
+    secondAction: {
       label: 'Пригласить в задачу',
       onClick: async (closeProfile) => {
         closeProfile();
@@ -153,6 +170,11 @@ function openProfileWithInvite(userId, user) {
       },
     },
   });
+}
+
+async function openChatWith(userId) {
+  sessionStorage.setItem('nirbi_open_chat_with', String(userId));
+  window.location.href = 'chats.html';
 }
 
 // ── Pagination ──────────────────────────────────────────────────────────────

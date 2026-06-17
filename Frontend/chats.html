@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Чаты — Nirbi</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="main.css"/>
+  <link rel="stylesheet" href="tasks.css"/>
+  <link rel="stylesheet" href="chats.css"/>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/7.0.5/signalr.min.js"></script>
+</head>
+<body>
+<div id="app-shell">
+
+  <!-- ── Sidebar ─────────────────────────────────────────────────────────── -->
+  <aside class="sidebar">
+    <div class="sidebar-brand">
+      <div class="brand-logo">N</div>
+      <span class="brand-name">Nirbi</span>
+    </div>
+    <nav class="sidebar-nav">
+      <a class="nav-item" href="tasks.html">
+        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6">
+          <rect x="2" y="3" width="16" height="14" rx="2"/><path d="M6 7h8M6 10h8M6 13h5"/>
+        </svg>
+        <span>Задачи</span>
+      </a>
+      <a class="nav-item active" href="chats.html">
+        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6">
+          <path d="M2 4a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H6l-4 3V4z"/>
+        </svg>
+        <span>Чаты</span>
+      </a>
+      <a class="nav-item" href="users.html">
+        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6">
+          <circle cx="9" cy="6" r="4"/><path d="M2 18c0-4 3-6 7-6s7 2 7 6"/>
+          <circle cx="16" cy="6" r="3"/><path d="M18 18c0-3-1.5-5-4-5.5"/>
+        </svg>
+        <span>Люди</span>
+      </a>
+      <a class="nav-item" href="confirmations.html">
+        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6">
+          <path d="M9 12l2 2 4-4"/><rect x="3" y="3" width="14" height="14" rx="2"/>
+        </svg>
+        <span>Заявки</span>
+      </a>
+      <a class="nav-item" href="profile.html">
+        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6">
+          <circle cx="10" cy="7" r="4"/><path d="M2 18c0-4 3.6-7 8-7s8 3 8 7"/>
+        </svg>
+        <span>Профиль</span>
+      </a>
+    </nav>
+    <button class="nav-item nav-logout" id="btn-logout">
+      <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6">
+        <path d="M13 3h4a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1h-4M9 14l-4-4 4-4M5 10h10"/>
+      </svg>
+      <span>Выйти</span>
+    </button>
+  </aside>
+  <div class="sidebar-overlay"></div>
+
+  <!-- ── Main ──────────────────────────────────────────────────────────────── -->
+  <main class="main-content chats-main">
+
+    <!-- Левая панель: список чатов -->
+    <div class="chats-sidebar">
+      <div class="chats-sidebar-header">
+        <h2 class="chats-sidebar-title">Сообщения</h2>
+        <button class="icon-btn" id="btn-search-chats" title="Поиск чата">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6">
+            <circle cx="9" cy="9" r="6"/><path d="M13.5 13.5L17 17"/>
+          </svg>
+        </button>
+      </div>
+
+      <!-- Поиск по чатам -->
+      <div id="chat-search-wrap" hidden>
+        <input type="text" id="chat-search-input" class="field-input"
+               placeholder="Поиск по чатам…" autocomplete="off" style="margin-bottom:.75rem;"/>
+      </div>
+
+      <!-- Список -->
+      <div id="chat-list" class="chat-list" role="list"></div>
+      <div id="chat-list-empty" class="chat-list-empty" hidden>
+        <svg viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="1.5" width="40" height="40">
+          <path d="M5 8a3 3 0 0 1 3-3h24a3 3 0 0 1 3 3v18a3 3 0 0 1-3 3H10l-5 5V8z"/>
+        </svg>
+        <p>Чатов пока нет</p>
+        <span>Напишите кому-нибудь из раздела «Люди»</span>
+      </div>
+    </div>
+
+    <!-- Правая панель: переписка -->
+    <div id="chat-welcome" class="chat-welcome">
+      <svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="1.5" width="56" height="56">
+        <path d="M8 12a5 5 0 0 1 5-5h38a5 5 0 0 1 5 5v28a5 5 0 0 1-5 5H16L8 52V12z"/>
+        <path d="M22 27h20M22 33h12"/>
+      </svg>
+      <h3>Выберите чат</h3>
+      <p>Или напишите кому-нибудь из раздела <a href="users.html">«Люди»</a></p>
+    </div>
+
+    <div id="chat-thread" class="chat-thread" hidden>
+      <!-- Шапка треда -->
+      <div id="thread-header" class="thread-header">
+        <div class="thread-avatar" id="thread-avatar-el">?</div>
+        <div class="thread-info">
+          <div class="thread-title" id="thread-title">Чат</div>
+          <div class="thread-sub" id="thread-sub"></div>
+        </div>
+      </div>
+
+      <!-- Сообщения -->
+      <div id="msg-container" class="msg-container"></div>
+
+      <!-- Баннер редактирования -->
+      <div id="edit-banner" class="edit-banner" hidden>
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" width="14" height="14">
+          <path d="M11 2l3 3-9 9H2v-3l9-9z"/>
+        </svg>
+        <span>Редактирование: <em id="edit-banner-text"></em></span>
+        <button class="edit-banner-cancel" id="btn-cancel-edit" title="Отмена">✕</button>
+      </div>
+
+      <!-- Ввод сообщения -->
+      <div class="msg-input-wrap">
+        <textarea id="msg-input" class="msg-textarea" rows="1"
+                  placeholder="Напишите сообщение…" maxlength="4000"></textarea>
+        <button id="btn-send" class="btn-send" title="Отправить">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M3 10l14-7-7 14V10H3z" stroke-linejoin="round"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<div id="toast-container"></div>
+
+<script type="module" src="chats.js"></script>
+</body>
+</html>

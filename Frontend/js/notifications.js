@@ -3,15 +3,38 @@ import { tokenStore } from './tokenStore.js';
 const HUB_URL = '/notificationHub';
 
 let connection = null;
+
+// Все поддерживаемые события SignalR (подтверждения + чат)
 const listeners = {
+  // Подтверждения
   ShowConfirmationCreated: [],
-  ShowConfirmationRespond:  [],
-  ShowConfirmationRevoked:  [],
+  ShowConfirmationRespond: [],
+  ShowConfirmationRevoked: [],
+
+  // Чаты
+  ChatCreated:    [],
+  MessageCreated: [],
+  MessageDeleted: [],
+  MessageUpdated: [],
+  UserJoined:     [],
+  UserRemoved:    [],
 };
 
+/**
+ * Подписаться на SignalR-событие.
+ * Можно вызывать до startNotifications() — listeners накапливаются.
+ */
 export function onNotification(event, cb) {
   if (!listeners[event]) listeners[event] = [];
   listeners[event].push(cb);
+}
+
+/**
+ * Отписаться от события (например при размонтировании страницы).
+ */
+export function offNotification(event, cb) {
+  if (!listeners[event]) return;
+  listeners[event] = listeners[event].filter(fn => fn !== cb);
 }
 
 export async function startNotifications() {
@@ -29,16 +52,20 @@ export async function startNotifications() {
     .configureLogging(signalR.LogLevel.Warning)
     .build();
 
-  // Привязываем обработчики событий
+  // Привязываем обработчики для всех событий
   Object.keys(listeners).forEach(event => {
     connection.on(event, payload => {
       listeners[event].forEach(cb => {
-        try { cb(payload); } catch (e) { console.error('[notifications] listener error', e); }
+        try { cb(payload); } catch (e) { console.error(`[notifications] listener error [${event}]`, e); }
       });
     });
   });
 
-  connection.onreconnected(() => console.log('[notifications] reconnected'));
+  connection.onreconnected(() => {
+    console.log('[notifications] reconnected');
+    // Уведомляем подписчиков о переподключении (они могут перезагрузить данные)
+    window.dispatchEvent(new CustomEvent('signalr:reconnected'));
+  });
   connection.onclose(err => console.warn('[notifications] connection closed', err));
 
   try {
@@ -46,10 +73,10 @@ export async function startNotifications() {
     console.log('[notifications] connected to', HUB_URL);
   } catch (err) {
     console.error('[notifications] connect failed:', err);
-    // Попробуем ещё раз через 5 секунд
     setTimeout(() => { connection = null; startNotifications(); }, 5000);
     return null;
   }
+
   return connection;
 }
 
@@ -58,4 +85,9 @@ export function stopNotifications() {
     connection.stop().catch(() => {});
     connection = null;
   }
+}
+
+/** Возвращает текущее состояние соединения ('Connected' | 'Disconnected' | ...) */
+export function getConnectionState() {
+  return connection?.state ?? 'Disconnected';
 }

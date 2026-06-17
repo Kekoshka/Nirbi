@@ -1,0 +1,51 @@
+{
+  "type": "record",
+  "name": "MessageCreated",
+  "namespace": "CommunicationService",
+  "fields": [
+    {
+      "name": "Id",
+      "type": "string",
+      "logicalType": "uuid"
+    },
+    {
+      "name": "Sender",
+      "type": "string",
+      "logicalType": "uuid"
+    },
+    {
+      "name": "ChatId",
+      "type": "string",
+      "logicalType": "uuid"
+    },
+    {
+      "name": "Content",
+      "type": "string"
+    },
+    {
+      "name": "CreatedAt",
+      "type": "long",
+      "logicalType": "timestamp-millis"
+    },
+    {
+      "name": "ChatUsers",
+      "type": {
+        "type": "array",
+        "items": {
+          "type": "string",
+          "logicalType": "uuid"
+        }
+      }
+    },
+    {
+      "name": "EventId",
+      "type": "string",
+      "logicalType": "uuid"
+    },
+    {
+      "name": "OccurredOn",
+      "type": "long",
+      "logicalType": "timestamp-millis"
+    }
+  ]
+}

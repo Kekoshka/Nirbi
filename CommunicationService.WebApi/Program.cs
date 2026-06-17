@@ -1,21 +1,52 @@
+using CommunicationService.WebApi.Common.Extensions;
+using CommunicationService.WebApi.Common.Options;
+using CommunicationService.WebApi.Interfaces;
+using CommunicationService.WebApi.Services;
+using ExceptionHandler;
+using Nirbi.ServiceAuth.Extensions;
+using System.Reflection;
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 
 builder.Services.AddControllers();
-// Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
+builder.Services.AddHttpContextAccessor();
+
+builder.Services.Configure<ExternalServicesOptions>(
+    builder.Configuration.GetSection(nameof(ExternalServicesOptions)));
+builder.Services.Configure<KafkaConsumersOptions>(
+    builder.Configuration.GetSection(nameof(KafkaConsumersOptions)));
+
+
+builder.Services.AddSchemaRegistryClient(builder.Configuration);
+builder.Services.AddHostedService<HostedBase>();
+builder.Services.AddNirbiServiceAuth(builder.Configuration);
+builder.Services.AddRefit(builder.Configuration);
+
+builder.Services.UsePostgreSql(builder.Configuration);
+builder.Services.AddDomainEvents();
+
+builder.Services.AddScoped<IChatService, ChatService>();
+builder.Services.AddScoped<IChatUserService, ChatUserService>();
+builder.Services.AddScoped<IMessageService, MessageService>();
+builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
+builder.Services.AddSingleton<IKafkaService, KafkaService>();
+
+builder.Services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(Assembly.GetExecutingAssembly()));
+
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
 }
 
+app.UseExceptionHandling();
 app.UseHttpsRedirection();
 
 app.UseAuthorization();

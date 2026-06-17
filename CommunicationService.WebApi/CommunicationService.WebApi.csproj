@@ -37,17 +37,16 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="Common\AvroSchemas\" />
     <Folder Include="Common\Behaviors\" />
-    <Folder Include="Common\DTO\" />
-    <Folder Include="Common\Extensions\" />
-    <Folder Include="Common\Mappers\" />
-    <Folder Include="Common\Options\" />
     <Folder Include="Common\Validators\" />
-    <Folder Include="Controllers\" />
-    <Folder Include="Interfaces\" />
     <Folder Include="Mediator\" />
-    <Folder Include="Services\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\CommunicationService.DataAccess.Postgres\CommunicationService.DataAccess.Postgres.csproj" />
+    <ProjectReference Include="..\Nirbi.ServiceAuth\Nirbi.ServiceAuth.csproj" />
+    <ProjectReference Include="..\Shared.ExceptionHandler\ExceptionHandler\ExceptionHandler.csproj" />
+    <ProjectReference Include="..\Shared.Mapping\Shared.Mapping.csproj" />
   </ItemGroup>
 
 </Project>

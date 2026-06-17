@@ -208,24 +208,41 @@ export async function openUserProfile(userId, opts = {}) {
       ? '<div class="up-empty">Пользователь не указал дополнительных данных</div>' : ''}
   `;
 
-  if (opts.action) {
+    if (opts.action || opts.secondAction) {
     footerEl.hidden = false;
+    footerEl.style.cssText = 'display:flex;gap:.75rem;flex-wrap:wrap;';
     footerEl.innerHTML = `
-      <button class="btn-primary" id="up-action" style="width:auto;padding:0 2rem;">
-        <span class="btn-label">${escHtml(opts.action.label)}</span>
-        <span class="btn-spinner" hidden></span>
-      </button>`;
-    const btn = footerEl.querySelector('#up-action');
-    btn.addEventListener('click', async () => {
-      const lbl = btn.querySelector('.btn-label');
-      const sp  = btn.querySelector('.btn-spinner');
-      btn.disabled = true; if (lbl) lbl.hidden = true; if (sp) sp.hidden = false;
-      try {
-        await opts.action.onClick(close);
-      } finally {
-        btn.disabled = false; if (lbl) lbl.hidden = false; if (sp) sp.hidden = true;
-      }
-    });
+      ${opts.action ? `
+        <button class="btn-primary" id="up-action" style="width:auto;padding:0 1.5rem;flex:1;">
+          <span class="btn-label">${escHtml(opts.action.label)}</span>
+          <span class="btn-spinner" hidden></span>
+        </button>` : ''}
+      ${opts.secondAction ? `
+        <button class="btn-secondary" id="up-second-action" style="width:auto;padding:0 1.5rem;flex:1;">
+          <span class="btn-label">${escHtml(opts.secondAction.label)}</span>
+          <span class="btn-spinner" hidden></span>
+        </button>` : ''}`;
+
+    function bindActionBtn(id, handler) {
+      const btn = footerEl.querySelector(`#${id}`);
+      if (!btn) return;
+      btn.addEventListener('click', async () => {
+        const lbl = btn.querySelector('.btn-label');
+        const sp  = btn.querySelector('.btn-spinner');
+        btn.disabled = true;
+        if (lbl) lbl.hidden = true;
+        if (sp)  sp.hidden  = false;
+        try { await handler(close); }
+        finally {
+          btn.disabled = false;
+          if (lbl) lbl.hidden = false;
+          if (sp)  sp.hidden  = true;
+        }
+      });
+    }
+
+    if (opts.action)       bindActionBtn('up-action',        opts.action.onClick);
+    if (opts.secondAction) bindActionBtn('up-second-action', opts.secondAction.onClick);
   }
 }
 

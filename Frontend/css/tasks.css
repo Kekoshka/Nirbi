@@ -1228,3 +1228,18 @@
   opacity: .45;
   cursor: not-allowed;
 }
+.card-preview-loading {
+  /* те же размеры, что у .card-preview, чтобы карточка не "прыгала" */
+  background: linear-gradient(90deg, var(--surface) 25%, #e8ecf2 50%, var(--surface) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s infinite;
+}
+
+/* Плавное появление картинки после загрузки */
+.card-preview img {
+  animation: previewFadeIn .25s ease;
+}
+@keyframes previewFadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}

@@ -1,0 +1,37 @@
+{
+  "type": "record",
+  "name": "UserRemoved",
+  "namespace": "CommunicationService",
+  "fields": [
+    {
+      "name": "UserId",
+      "type": "string",
+      "logicalType": "uuid"
+    },
+    {
+      "name": "ChatId",
+      "type": "string",
+      "logicalType": "uuid"
+    },
+    {
+      "name": "ChatUsers",
+      "type": {
+        "type": "array",
+        "items": {
+          "type": "string",
+          "logicalType": "uuid"
+        }
+      }
+    },
+    {
+      "name": "EventId",
+      "type": "string",
+      "logicalType": "uuid"
+    },
+    {
+      "name": "OccurredOn",
+      "type": "long",
+      "logicalType": "timestamp-millis"
+    }
+  ]
+}

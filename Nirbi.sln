@@ -32,6 +32,9 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DataService.WebApi", "DataService.WebApi\DataService.WebApi.csproj", "{DE982D5B-C938-4078-87A3-7E9D27570B05}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CommunicationService.WebApi", "CommunicationService.WebApi\CommunicationService.WebApi.csproj", "{CDFD8367-75D7-4673-BBEB-C7578E5F5390}"
+	ProjectSection(ProjectDependencies) = postProject
+		{D7E5C30C-D1FE-4D0C-A89E-111563780886} = {D7E5C30C-D1FE-4D0C-A89E-111563780886}
+	EndProjectSection
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CommunicationService.DataAccess.Postgres", "CommunicationService.DataAccess.Postgres\CommunicationService.DataAccess.Postgres.csproj", "{D7E5C30C-D1FE-4D0C-A89E-111563780886}"
 EndProject
