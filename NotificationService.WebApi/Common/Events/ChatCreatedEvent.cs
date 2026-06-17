@@ -1,0 +1,12 @@
+namespace NotificationService.WebApi.Common.Events
+{
+    public record class ChatCreatedEvent(
+        Guid Id,
+        string Name,
+        Guid ChatTypeId,
+        List<Guid> ChatUsers) : IDomainEvent
+    {
+        public Guid EventId { get; } = Guid.NewGuid();
+        public DateTime OccurredOn { get; } = DateTime.UtcNow;
+    }
+}

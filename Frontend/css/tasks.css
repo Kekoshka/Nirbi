@@ -608,11 +608,92 @@
 
 .form-actions {
   display: flex;
+  align-items: center;
   justify-content: flex-end;
   gap: .75rem;
   padding-top: .5rem;
   flex-wrap: wrap;
 }
+.form-actions .btn-primary {
+  height: 44px;
+  margin-top: 0;
+  width: auto;
+}
+
+/* ── Owner controls (task detail) ─────────────────────────────────────────── */
+.owner-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  margin-top: 1.25rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--border);
+}
+.owner-control-row { display: flex; flex-direction: column; gap: .5rem; }
+.owner-control-label {
+  font-size: .8rem;
+  font-weight: 700;
+  color: var(--text-sec);
+  text-transform: uppercase;
+  letter-spacing: .04em;
+}
+.owner-control-inline { display: flex; align-items: center; gap: .5rem; flex-wrap: wrap; }
+.owner-participants { display: flex; flex-direction: column; gap: .5rem; }
+.owner-participants-loading,
+.owner-participants-empty {
+  font-size: .875rem;
+  color: var(--text-sec);
+  padding: .5rem 0;
+}
+.owner-participant {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: .75rem;
+  padding: .55rem .75rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+.owner-participant-name {
+  font-size: .875rem;
+  font-weight: 600;
+  color: var(--primary);
+  text-align: left;
+}
+.owner-participant-remove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 6px;
+  color: var(--text-sec);
+  flex-shrink: 0;
+  transition: background var(--transition), color var(--transition);
+}
+.owner-participant-remove:hover { background: #fef2f2; color: var(--error); }
+.owner-participant-remove svg { width: 14px; height: 14px; }
+
+/* ── Кнопка «Написать» в карточках пользователей ─────────────────────────── */
+.user-btn-chat {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 36px;
+  padding: 0 .875rem;
+  border-radius: var(--radius-sm);
+  font-size: .82rem;
+  font-weight: 700;
+  border: 1.5px solid var(--primary);
+  color: var(--primary);
+  background: transparent;
+  gap: .35rem;
+  transition: background var(--transition), color var(--transition);
+  width: auto;
+}
+.user-btn-chat:hover { background: var(--primary-light); }
+.user-btn-chat svg { width: 14px; height: 14px; flex-shrink: 0; }
 
 /* Confirm Modal */
 .modal-confirm-inner {

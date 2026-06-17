@@ -87,9 +87,6 @@ function render() {
 
   if (!items.length) {
     grid.innerHTML = '';
-    grid.querySelectorAll('.user-btn-chat').forEach(b => {
-      b.addEventListener('click', () => openChatWith(b.dataset.id));
-    });
     emptyEl.hidden = false;
     updatePager();
     return;
@@ -137,6 +134,12 @@ function render() {
     b.addEventListener('click', () => {
       const u = items.find(x => String(idOf(x)) === String(b.dataset.id));
       openInvitePicker(b.dataset.id, u ? fullName(u) : '');
+    });
+  });
+  grid.querySelectorAll('.user-btn-chat').forEach(b => {
+    b.addEventListener('click', e => {
+      e.stopPropagation();
+      openChatWith(b.dataset.id);
     });
   });
   // клик по карточке (не по кнопке) — открыть профиль

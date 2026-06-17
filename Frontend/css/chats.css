@@ -4,12 +4,20 @@
    ═══════════════════════════════════════════════════════════════════════════ */
 
 /* ── Общий layout страницы чатов ─────────────────────────────────────────── */
+#app-shell:has(.chats-main) {
+  height: 100vh;
+  overflow: hidden;
+}
+
 .chats-main {
   display: flex;
-  height: 100vh;
+  flex-direction: row;
   padding: 0;
   gap: 0;
   overflow: hidden;
+  flex: 1;
+  min-height: 0;
+  align-self: stretch;
 }
 
 /* ── Левая панель: список чатов ──────────────────────────────────────────── */
@@ -20,7 +28,7 @@
   flex-direction: column;
   background: var(--bg);
   border-right: 1px solid var(--border);
-  height: 100vh;
+  min-height: 0;
   overflow: hidden;
 }
 
@@ -177,8 +185,8 @@
   display: flex;
   flex-direction: column;
   min-width: 0;
+  min-height: 0;
   background: var(--surface);
-  height: 100vh;
   overflow: hidden;
 }
 
@@ -459,24 +467,6 @@
 .btn-send:active { transform: scale(.97); }
 .btn-send:disabled { opacity: .5; cursor: not-allowed; transform: none; }
 .btn-send svg { width: 18px; height: 18px; }
-
-/* ── Кнопка "Написать" в карточках пользователей ─────────────────────────── */
-.user-btn-chat {
-  display: inline-flex; align-items: center; justify-content: center;
-  height: 36px;
-  padding: 0 .875rem;
-  border-radius: var(--radius-sm);
-  font-size: .82rem;
-  font-weight: 700;
-  border: 1.5px solid var(--primary);
-  color: var(--primary);
-  background: transparent;
-  gap: .35rem;
-  transition: background var(--transition), color var(--transition);
-  width: auto;
-}
-.user-btn-chat:hover { background: var(--primary-light); }
-.user-btn-chat svg { width: 14px; height: 14px; }
 
 /* ── Адаптив ─────────────────────────────────────────────────────────────── */
 @media (max-width: 820px) {

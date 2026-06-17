@@ -4,7 +4,7 @@ using MinorTaskService.DataAccess.Postgres.DomainEvents.Interfaces;
 
 namespace MinorTaskService.DataAccess.Postgres.Models
 {
-    public class TaskParticipant
+    public class TaskParticipant : IHasDomainEvents
     {
         private readonly List<IDomainEvent> _domainEvents = new();
         public IReadOnlyCollection<IDomainEvent> DomainEvents => _domainEvents.AsReadOnly();
@@ -27,5 +27,7 @@ namespace MinorTaskService.DataAccess.Postgres.Models
             IsActive = false;
             _domainEvents.Add(new TaskParticipantRemovedEvent(MinorTaskId, UserId));
         }
+        public void ClearDomainEvents() => _domainEvents.Clear();
+
     }
 }

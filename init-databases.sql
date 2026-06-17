@@ -17,3 +17,5 @@ ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT EXECUTE ON FUNCTIONS TO keycloak
 ALTER DATABASE keycloak OWNER TO keycloak;
 
 CREATE DATABASE data_service OWNER postgres;
+
+CREATE DATABASE communication_service OWNER postgres;
