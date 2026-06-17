@@ -106,20 +106,10 @@
 
 <div id="toast-container"></div>
 
-<!-- Burger button (shown on mobile ≤640px) -->
-<button class="btn-burger" id="btn-burger" aria-label="Открыть меню" aria-expanded="false" aria-controls="sidebar">
-  <svg class="icon-open" viewBox="0 0 20 20" fill="none">
-    <path d="M3 5h14M3 10h14M3 15h14" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"/>
-  </svg>
-  <svg class="icon-close" viewBox="0 0 20 20" fill="none" style="display:none">
-    <path d="M4 4l12 12M16 4L4 16" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"/>
-  </svg>
-</button>
-
 <div id="app-shell">
 
   <!-- Sidebar -->
-  <aside class="sidebar" id="sidebar">
+  <aside class="sidebar">
     <div class="sidebar-brand">
       <span class="brand-logo">N</span>
       <span class="brand-name">Nirbi</span>
@@ -151,9 +141,6 @@
       <span>Выйти</span>
     </button>
   </aside>
-
-  <!-- Sidebar overlay (mobile) -->
-  <div class="sidebar-overlay" id="sidebar-overlay"></div>
 
   <!-- Main -->
   <main class="main-content">
@@ -213,6 +200,5 @@
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.7/signalr.min.js"></script>
 <script type="module" src="js/users.js"></script>
-<script src="js/burger.js"></script>
 </body>
 </html>

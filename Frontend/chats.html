@@ -13,21 +13,10 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/7.0.5/signalr.min.js"></script>
 </head>
 <body>
-
-<!-- Burger button (shown on mobile ≤640px) -->
-<button class="btn-burger" id="btn-burger" aria-label="Открыть меню" aria-expanded="false" aria-controls="sidebar">
-  <svg class="icon-open" viewBox="0 0 20 20" fill="none">
-    <path d="M3 5h14M3 10h14M3 15h14" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"/>
-  </svg>
-  <svg class="icon-close" viewBox="0 0 20 20" fill="none" style="display:none">
-    <path d="M4 4l12 12M16 4L4 16" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"/>
-  </svg>
-</button>
-
 <div id="app-shell">
 
   <!-- ── Sidebar ─────────────────────────────────────────────────────────── -->
-  <aside class="sidebar" id="sidebar">
+  <aside class="sidebar">
     <div class="sidebar-brand">
       <span class="brand-logo">N</span>
       <span class="brand-name">Nirbi</span>
@@ -59,9 +48,7 @@
       <span>Выйти</span>
     </button>
   </aside>
-
-  <!-- Sidebar overlay (mobile) -->
-  <div class="sidebar-overlay" id="sidebar-overlay"></div>
+  <div class="sidebar-overlay"></div>
 
   <!-- ── Main ──────────────────────────────────────────────────────────────── -->
   <main class="main-content chats-main">
@@ -85,39 +72,49 @@
 
       <!-- Список -->
       <div id="chat-list" class="chat-list" role="list"></div>
+      <div id="chat-list-empty" class="chat-list-empty" hidden>
+        <svg viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="1.5" width="40" height="40">
+          <path d="M5 8a3 3 0 0 1 3-3h24a3 3 0 0 1 3 3v18a3 3 0 0 1-3 3H10l-5 5V8z"/>
+        </svg>
+        <p>Чатов пока нет</p>
+        <span>Напишите кому-нибудь из раздела «Пользователи»</span>
+      </div>
     </div>
 
-    <!-- Правая панель: тред -->
-    <div class="chat-thread" id="chat-thread">
+    <!-- Правая панель: переписка -->
+    <div id="chat-welcome" class="chat-welcome">
+      <svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="1.5" width="56" height="56">
+        <path d="M8 12a5 5 0 0 1 5-5h38a5 5 0 0 1 5 5v28a5 5 0 0 1-5 5H16L8 52V12z"/>
+        <path d="M22 27h20M22 33h12"/>
+      </svg>
+      <h3>Выберите чат</h3>
+      <p>Или напишите кому-нибудь из раздела <a href="users.html">«Пользователи»</a></p>
+    </div>
 
-      <!-- Приветственный экран -->
-      <div class="chat-welcome" id="chat-welcome">
-        <svg width="48" height="48" viewBox="0 0 24 24" fill="none"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        <h3>Выберите чат</h3>
-        <p>Выберите беседу из списка слева, чтобы начать общение</p>
-      </div>
-
-      <!-- Шапка треда (скрыта пока не выбран чат) -->
-      <div class="thread-header" id="thread-header" hidden>
-        <div class="thread-avatar" id="thread-avatar"></div>
+    <div id="chat-thread" class="chat-thread" hidden>
+      <!-- Шапка треда -->
+      <div id="thread-header" class="thread-header">
+        <div class="thread-avatar" id="thread-avatar-el">?</div>
         <div class="thread-info">
-          <div class="thread-title" id="thread-title"></div>
+          <div class="thread-title" id="thread-title">Чат</div>
           <div class="thread-sub" id="thread-sub"></div>
         </div>
       </div>
 
       <!-- Сообщения -->
-      <div class="msg-container" id="msg-container" hidden></div>
+      <div id="msg-container" class="msg-container"></div>
 
       <!-- Баннер редактирования -->
-      <div class="edit-banner" id="edit-banner" hidden>
-        <svg width="14" height="14" viewBox="0 0 20 20" fill="none"><path d="M13.586 3.586a2 2 0 1 1 2.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        Редактирование: <em id="edit-preview"></em>
+      <div id="edit-banner" class="edit-banner" hidden>
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" width="14" height="14">
+          <path d="M11 2l3 3-9 9H2v-3l9-9z"/>
+        </svg>
+        <span>Редактирование: <em id="edit-banner-text"></em></span>
         <button class="edit-banner-cancel" id="btn-cancel-edit" title="Отмена">✕</button>
       </div>
 
       <!-- Ввод сообщения -->
-      <div class="msg-input-wrap" id="msg-input-wrap" hidden>
+      <div class="msg-input-wrap">
         <textarea id="msg-input" class="msg-textarea" rows="1"
                   placeholder="Напишите сообщение…" maxlength="4000"></textarea>
         <button id="btn-send" class="btn-send" title="Отправить">
@@ -134,6 +131,5 @@
 <div id="toast-container"></div>
 
 <script type="module" src="js/chats.js"></script>
-<script src="js/burger.js"></script>
 </body>
 </html>
