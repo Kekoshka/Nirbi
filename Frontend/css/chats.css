@@ -500,3 +500,107 @@
 
   .msg-bubble { max-width: 85%; }
 }
+
+@media (max-width: 640px) {
+
+  /* Чат-страница занимает всю высоту экрана без вертикального скролла */
+  #app-shell:has(.chats-main) {
+    height: 100dvh; /* dvh учитывает мобильные адресные бары */
+    overflow: hidden;
+  }
+
+  /* Основной контейнер чатов — вертикальный стек с переключением панелей */
+  .chats-main {
+    flex-direction: column;
+    height: calc(100dvh - 0px);
+    padding-top: 4rem; /* место под бургер */
+    overflow: hidden;
+  }
+
+  /* Список чатов: фиксированная высота со скроллом */
+  .chats-sidebar {
+    width: 100%;
+    height: auto;
+    max-height: 40vh;
+    min-height: 160px;
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+
+  /* Шапка списка чатов — более компактная */
+  .chats-sidebar-header {
+    padding: .75rem 1rem .5rem;
+  }
+
+  /* Тред занимает оставшееся место */
+  .chat-thread {
+    flex: 1;
+    min-height: 0;
+    height: auto;
+    overflow: hidden;
+  }
+
+  /* Контейнер сообщений скроллится внутри треда */
+  .msg-container {
+    flex: 1;
+    max-height: none;
+    min-height: 0;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    padding: .75rem 1rem;
+  }
+
+  /* Шапка треда — компактная */
+  .thread-header {
+    padding: .65rem 1rem;
+    gap: .65rem;
+  }
+
+  /* Поле ввода — чуть компактнее */
+  .msg-input-wrap {
+    padding: .6rem .75rem .75rem;
+    gap: .5rem;
+  }
+
+  .msg-textarea {
+    font-size: .875rem;
+    min-height: 38px;
+    padding: .5rem .85rem;
+    border-radius: 10px;
+  }
+
+  .btn-send {
+    width: 38px;
+    height: 38px;
+    flex-shrink: 0;
+  }
+
+  /* Пузырь: чуть шире на маленьком экране */
+  .msg-bubble {
+    max-width: 82%;
+  }
+
+  /* Приветственный экран в треде */
+  .chat-welcome {
+    flex: 1;
+    min-height: 0;
+    padding: 2rem 1.5rem;
+  }
+}
+
+/* ── Очень маленькие экраны (≤380px) ────────────────────────────────────── */
+@media (max-width: 380px) {
+  .chats-sidebar {
+    max-height: 35vh;
+  }
+
+  .msg-bubble {
+    max-width: 88%;
+    font-size: .825rem;
+  }
+
+  .chats-sidebar-title {
+    font-size: 1rem;
+  }
+}

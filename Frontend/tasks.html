@@ -15,11 +15,21 @@
 
 <div id="toast-container"></div>
 
+<!-- Burger button (shown on mobile ≤640px) -->
+<button class="btn-burger" id="btn-burger" aria-label="Открыть меню" aria-expanded="false" aria-controls="sidebar">
+  <svg class="icon-open" viewBox="0 0 20 20" fill="none">
+    <path d="M3 5h14M3 10h14M3 15h14" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"/>
+  </svg>
+  <svg class="icon-close" viewBox="0 0 20 20" fill="none" style="display:none">
+    <path d="M4 4l12 12M16 4L4 16" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"/>
+  </svg>
+</button>
+
 <!-- App Shell -->
 <div id="app-shell">
 
   <!-- Sidebar nav -->
-  <aside class="sidebar">
+  <aside class="sidebar" id="sidebar">
     <div class="sidebar-brand">
       <span class="brand-logo">N</span>
       <span class="brand-name">Nirbi</span>
@@ -51,6 +61,9 @@
       <span>Выйти</span>
     </button>
   </aside>
+
+  <!-- Sidebar overlay (mobile) -->
+  <div class="sidebar-overlay" id="sidebar-overlay"></div>
 
   <!-- Main content -->
   <main class="main-content">
@@ -123,7 +136,6 @@
     <!-- Cards grid -->
     <section class="cards-section">
       <div class="cards-grid" id="tasks-grid">
-        <!-- skeleton placeholders -->
         <div class="task-card skeleton"></div>
         <div class="task-card skeleton"></div>
         <div class="task-card skeleton"></div>
@@ -137,7 +149,6 @@
         <span>Попробуйте изменить фильтры или создайте новую задачу</span>
       </div>
 
-      <!-- Пагинация -->
       <div class="tasks-pager" id="tasks-pager" hidden>
         <button class="pager-btn" id="tasks-prev" disabled>← Назад</button>
         <span class="page-label" id="tasks-page-label">Стр. 1</span>
@@ -163,9 +174,7 @@
 
     <div class="detail-body">
       <div class="detail-description" id="detail-description"></div>
-
       <div class="detail-gallery" id="detail-gallery" hidden></div>
-
       <div class="detail-stats">
         <div class="stat-card">
           <span class="stat-label">Вознаграждение</span>
@@ -180,18 +189,13 @@
           <span class="stat-value coords-val" id="detail-coords"></span>
         </div>
       </div>
-
       <div class="detail-map-mini">
         <div id="detail-map"></div>
       </div>
-
-      <!-- Управление для владельца: статус + участники (заполняется JS) -->
       <div id="detail-owner-controls" hidden></div>
     </div>
 
-    <div class="detail-footer" id="detail-footer">
-      <!-- buttons injected by JS depending on owner/volunteer status -->
-    </div>
+    <div class="detail-footer" id="detail-footer"></div>
   </div>
 </div>
 
@@ -213,13 +217,11 @@
           </div>
           <span class="field-error" id="tf-name-error"></span>
         </div>
-
         <div class="field-group span-2">
           <label class="field-label" for="tf-desc">Описание</label>
           <textarea class="field-input field-textarea" id="tf-desc" rows="3" placeholder="Подробное описание, что нужно сделать..."></textarea>
           <span class="field-error" id="tf-desc-error"></span>
         </div>
-
         <div class="field-group">
           <label class="field-label" for="tf-volunteers">Кол-во волонтёров</label>
           <div class="field-wrap">
@@ -227,7 +229,6 @@
           </div>
           <span class="field-error" id="tf-volunteers-error"></span>
         </div>
-
         <div class="field-group">
           <label class="field-label" for="tf-reward">Вознаграждение (₽)</label>
           <div class="field-wrap">
@@ -235,14 +236,12 @@
           </div>
           <span class="field-error" id="tf-reward-error"></span>
         </div>
-
         <div class="field-group">
           <label class="field-label" for="tf-lat">Широта</label>
           <div class="field-wrap">
             <input class="field-input" id="tf-lat" type="number" step="any" placeholder="55.7558" readonly />
           </div>
         </div>
-
         <div class="field-group">
           <label class="field-label" for="tf-lng">Долгота</label>
           <div class="field-wrap">
@@ -302,19 +301,14 @@
   </div>
 </div>
 
-<!-- ── Reject reason modal (для быстрых действий из панели/toast) ─────────── -->
+<!-- ── Reject reason modal ─────────────────────────────────────────────────── -->
 <div class="modal-overlay" id="modal-reject" hidden>
   <div class="modal modal-confirm-inner" style="text-align:left;align-items:stretch;max-width:440px;">
     <h3 class="confirm-title" style="text-align:center;">Отклонить заявку?</h3>
-    <p class="confirm-text" style="text-align:center;">
-      Вы можете указать причину отклонения — это необязательно.
-    </p>
+    <p class="confirm-text" style="text-align:center;">Вы можете указать причину отклонения — это необязательно.</p>
     <div class="field-group" style="margin-top:1.1rem;">
-      <label class="field-label" for="reject-reason">
-        Причина отклонения <span class="hint-text">— необязательно</span>
-      </label>
-      <textarea class="field-input field-textarea" id="reject-reason" rows="3"
-        placeholder="Например: недостаточно опыта для этой задачи"></textarea>
+      <label class="field-label" for="reject-reason">Причина отклонения <span class="hint-text">— необязательно</span></label>
+      <textarea class="field-input field-textarea" id="reject-reason" rows="3" placeholder="Например: недостаточно опыта для этой задачи"></textarea>
     </div>
     <div class="confirm-actions" style="margin-top:1.1rem;">
       <button class="btn-secondary" id="btn-cancel-reject">Отмена</button>
@@ -337,5 +331,6 @@
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.7/signalr.min.js"></script>
 <script type="module" src="js/tasks.js"></script>
+<script src="js/burger.js"></script>
 </body>
 </html>
