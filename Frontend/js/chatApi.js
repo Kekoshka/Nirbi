@@ -16,35 +16,35 @@ export const chatApi = {
     return api.get(`/api/chat/${chatId}/chatUsers`);
   },
 
-  // POST /api/Messages — отправить в существующий групповой чат
+  // POST /api/messages/group — отправить в существующий групповой чат
   sendGroupMessage(chatId, content) {
-    return api.post('/api/Messages', { chatId, content });
+    return api.post('/api/messages/group', { chatId, content });
   },
 
-  // POST /api/Messages/private — отправить личное сообщение (создаёт чат при необходимости)
+  // POST /api/messages/private — отправить личное сообщение (создаёт чат при необходимости)
   sendPrivateMessage(recipientId, content) {
-    return api.post('/api/Messages/private', { recipient: recipientId, content });
+    return api.post('/api/messages/private', { recipient: recipientId, content });
   },
 
-  // GET /api/Messages?chatId= — история сообщений чата
+  // GET /api/chats/{chatId}/messages — история сообщений чата
   getMessages(chatId) {
-    return api.get(`/api/Messages?chatId=${chatId}`);
+    return api.get(`/api/chats/${chatId}/messages`);
   },
 
-  // GET /api/Messages/preview — превью последних сообщений для списка чатов
+  // GET /api/messages/preview — превью последних сообщений для списка чатов
   getPreviewMessages(chatIds) {
     if (!chatIds || !chatIds.length) return Promise.resolve([]);
     const qs = chatIds.map(id => `chatIds=${encodeURIComponent(id)}`).join('&');
-    return api.get(`/api/Messages/preview?${qs}`);
+    return api.get(`/api/messages/preview?${qs}`);
   },
 
-  // PUT /api/Messages/{messageId}
+  // PUT /api/messages
   updateMessage(messageId, content) {
-    return api.put(`/api/Messages/${messageId}`, { messageId, content });
+    return api.put('/api/messages', { messageId, content });
   },
 
-  // DELETE /api/Messages/{messageId}
+  // DELETE /api/messages/{messageId}
   deleteMessage(messageId) {
-    return api.delete(`/api/Messages/${messageId}`);
+    return api.delete(`/api/messages/${messageId}`);
   },
 };
