@@ -28,8 +28,8 @@ namespace CommunicationService.WebApi.Services
             var existedChat = _context.Chats
                 .Include(c => c.ChatUsers)
                 .FirstOrDefault(c => 
-                    c.ChatUsers.Any(u => u.Id == users[0]) &&
-                    c.ChatUsers.Any(u => u.Id == users[1]) &&
+                    c.ChatUsers.Any(u => u.UserId == users[0]) &&
+                    c.ChatUsers.Any(u => u.UserId == users[1]) &&
                     c.ChatTypeId == Common.Enums.ChatType.Private);
             if (existedChat != null)
                 throw new NotFoundException("Чат между пользователями уже существует!");
@@ -41,7 +41,9 @@ namespace CommunicationService.WebApi.Services
             await _context.Chats.AddAsync(chat, cancellationToken);
             await _context.SaveChangesAsync(cancellationToken);
 
-            chat.ChatUsers.ToList().AddRange(users.Select(u => new ChatUser(chat.Id, u, users)));
+            await _context.ChatUsers.AddRangeAsync(
+                users.Select(u => new ChatUser(chat.Id, u, users)),
+                cancellationToken);
             await _context.SaveChangesAsync(cancellationToken);
 
             return chat.Id;
@@ -56,7 +58,9 @@ namespace CommunicationService.WebApi.Services
             await _context.Chats.AddAsync(chat, cancellationToken);
             await _context.SaveChangesAsync(cancellationToken);
 
-            chat.ChatUsers.ToList().AddRange(request.Users.Select(u => new ChatUser(chat.Id,u, request.Users)));
+            await _context.ChatUsers.AddRangeAsync(
+                request.Users.Select(u => new ChatUser(chat.Id, u, request.Users)),
+                cancellationToken);
             await _context.SaveChangesAsync(cancellationToken);
             return chat.Id;
         }

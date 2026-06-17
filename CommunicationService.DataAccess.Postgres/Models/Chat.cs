@@ -20,7 +20,7 @@ namespace CommunicationService.DataAccess.Postgres.Models
         {
             Id = Guid.NewGuid();
             Name = name;
-            chatTypeId = chatTypeId;
+            ChatTypeId = chatTypeId;
 
             _domainEvents.Add(new ChatCreatedEvent(Id, Name, ChatTypeId, chatUsers));
         }

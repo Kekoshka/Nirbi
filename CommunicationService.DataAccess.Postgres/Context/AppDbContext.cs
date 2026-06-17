@@ -12,8 +12,8 @@ namespace CommunicationService.DataAccess.Postgres.Context
             IDomainEventDispatcher dispatcher) 
             : base (options)
         {
-            Database.EnsureCreated();
             _dispatcher = dispatcher;
+            Database.EnsureCreated();
         }
         public DbSet<Chat> Chats { get; set; }
         public DbSet<ChatType> ChatTypes { get; set; }
